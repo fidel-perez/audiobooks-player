@@ -33,7 +33,7 @@ import { apiFetch } from "./storage.js";
  * night's offline progress uploads before anything else. Single-device use, so
  * this last-write-wins merge is safe.
  */
-const API_BASE = "/api/";
+const API_BASE = "/kv/";
 const PROGRESS_KEY = "audiobooks-progress";
 const PROGRESS_DEBOUNCE_MS = 2000;
 // Browsers cap total in-flight `keepalive` request bodies at ~64 KB and SILENTLY

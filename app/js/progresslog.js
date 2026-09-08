@@ -46,7 +46,7 @@
 import { LS_PROGRESS_LOG } from "./config.js";
 import { apiFetch } from "./storage.js";
 
-const API_BASE = "/api/";
+const API_BASE = "/kv/";
 const LOG_KEY = "audiobooks-progress-log";
 const PUSH_DEBOUNCE_MS = 4000;
 

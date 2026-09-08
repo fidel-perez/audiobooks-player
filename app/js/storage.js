@@ -1,5 +1,5 @@
 /**
- * The one seam every /api/<key> call goes through: progress, queue,
+ * The one seam every /kv/<key> call goes through: progress, queue,
  * settings, the log, the solo-reader claim. Same `fetch(path, init)`
  * signature as the transport.js it replaces.
  */
@@ -8,9 +8,8 @@
 // Unset (default): IndexedDB via js/db.js's meta store, nothing leaves
 // the device.
 //
-// Set: a plain fetch to `<url>/api/<key>`, on the json_store contract —
-// deep-merge PATCH, `null` deletes a key, `_op: "progress_merge"` for
-// the progress map.
+// Set: a plain fetch to `<url>/kv/<key>`, deep-merge PATCH — `null`
+// deletes a key, `_op: "progress_merge"` for the progress map.
 //
 // Point it at your own instance; this repo ships no server.
 
@@ -43,11 +42,11 @@ function jsonResponse(value, status = 200) {
 }
 
 function keyFromPath(path) {
-  return path.startsWith("/api/") ? path.slice(5) : path;
+  return path.startsWith("/kv/") ? path.slice(4) : path;
 }
 
-// A `null` value deletes that key; matches json_store PATCH for every key
-// here except `audiobooks-progress` (see mergeServerMap below).
+// A `null` value deletes that key; everything else replaces it. See
+// mergeServerMap below for the one key with richer merge rules.
 function deepMergeDelta(base, delta) {
   const out = { ...(base || {}) };
   for (const k of Object.keys(delta)) {
@@ -80,10 +79,10 @@ async function localFetch(key, init) {
   return jsonResponse(next);
 }
 
-/** Drop-in for `fetch` on this app's `/api/<key>` paths. @type {typeof fetch} */
+/** Drop-in for `fetch` on this app's `/kv/<key>` paths. @type {typeof fetch} */
 export async function apiFetch(path, init) {
   const key = keyFromPath(path);
   const base = getSyncServerUrl();
   if (!base) return localFetch(key, init || {});
-  return fetch(`${base}/api/${key}`, init);
+  return fetch(`${base}/kv/${key}`, init);
 }

@@ -150,7 +150,7 @@ let pickBook = null; // the 🎲 spotlighted book, so it can be repainted on reo
 // deploy 5xx → loadBlob yields {}), the old whole-blob PUT rewrote the server
 // down to whatever the empty-ish in-memory map held, dropping every other
 // favorite. Reached over HTTP through Caddy's `/api/` → json_store, like todoapp.
-const API_BASE = "/api/";
+const API_BASE = "/kv/";
 const FAV_KEY = "audiobooks-favorites";
 // 👍/👎 per-book reaction (path -> "like" | "dislike" | "none" tombstone) and
 // author-level favorites (normalised author -> degree; 0 tombstones a seed).

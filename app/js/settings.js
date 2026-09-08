@@ -37,7 +37,7 @@
 
 import { apiFetch } from "./storage.js";
 
-const API_BASE = "/api/";
+const API_BASE = "/kv/";
 const SETTINGS_KEY = "audiobooks-settings";
 const PUSH_DEBOUNCE_MS = 600;
 

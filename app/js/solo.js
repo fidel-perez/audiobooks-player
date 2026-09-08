@@ -60,7 +60,7 @@ import { apiFetch } from "./storage.js";
 const CHANNEL = "audiobooks:playback";
 const LS_CLAIM = "audiobooks:playbackClaim";
 /** The shared claim, in the same store the progress map lives in. */
-const CLAIM_PATH = "/api/audiobooks-reader";
+const CLAIM_PATH = "/kv/audiobooks-reader";
 /** How often a reading window asks whether the book was taken from it. */
 const POLL_MS = 15000;
 
