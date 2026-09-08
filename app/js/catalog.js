@@ -339,7 +339,10 @@ async function loadBook(bk, forcePlay, select) {
     const r = await fetch(bk.url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const blob = await r.blob();
-    const name = decodeURIComponent(bk.url.split("/").pop() || "") || `${shortName(bk.t)}.epub`;
+    // bk.url may carry Standard Ebooks' ?source=download; strip the query
+    // before the split, or the "filename" ends in that instead of .epub.
+    const path = bk.url.split("?")[0];
+    const name = decodeURIComponent(path.split("/").pop() || "") || `${shortName(bk.t)}.epub`;
     file = new File([blob], name, { type: blob.type || "application/epub+zip" });
   } catch (e) {
     setStatus(`Error al descargar "${bk.t}": ${e.message}`);

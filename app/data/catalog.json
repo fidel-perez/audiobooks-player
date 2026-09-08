@@ -6,7 +6,7 @@
       "author": "Jane Austen",
       "lang": "en",
       "source": "standardebooks",
-      "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub"
+      "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub?source=download"
     },
     {
       "id": "se-frankenstein",
@@ -14,63 +14,63 @@
       "author": "Mary Wollstonecraft Shelley",
       "lang": "en",
       "source": "standardebooks",
-      "url": "https://standardebooks.org/ebooks/mary-shelley/frankenstein/downloads/mary-shelley_frankenstein.epub"
+      "url": "https://standardebooks.org/ebooks/mary-shelley/frankenstein/downloads/mary-shelley_frankenstein.epub?source=download"
     },
     {
-      "id": "gu-2701",
+      "id": "se-moby-dick",
       "title": "Moby-Dick; or, The Whale",
       "author": "Herman Melville",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/2701.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/herman-melville/moby-dick/downloads/herman-melville_moby-dick.epub?source=download"
     },
     {
-      "id": "gu-345",
+      "id": "se-dracula",
       "title": "Dracula",
       "author": "Bram Stoker",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/345.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/bram-stoker/dracula/downloads/bram-stoker_dracula.epub?source=download"
     },
     {
-      "id": "gu-1661",
+      "id": "se-sherlock-holmes",
       "title": "The Adventures of Sherlock Holmes",
       "author": "Arthur Conan Doyle",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/1661.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/arthur-conan-doyle/the-adventures-of-sherlock-holmes/downloads/arthur-conan-doyle_the-adventures-of-sherlock-holmes.epub?source=download"
     },
     {
-      "id": "gu-98",
+      "id": "se-tale-of-two-cities",
       "title": "A Tale of Two Cities",
       "author": "Charles Dickens",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/98.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/charles-dickens/a-tale-of-two-cities/downloads/charles-dickens_a-tale-of-two-cities.epub?source=download"
     },
     {
-      "id": "gu-174",
+      "id": "se-dorian-gray",
       "title": "The Picture of Dorian Gray",
       "author": "Oscar Wilde",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/174.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/oscar-wilde/the-picture-of-dorian-gray/downloads/oscar-wilde_the-picture-of-dorian-gray.epub?source=download"
     },
     {
-      "id": "gu-11",
+      "id": "se-alice-in-wonderland",
       "title": "Alice's Adventures in Wonderland",
       "author": "Lewis Carroll",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/11.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/lewis-carroll/alices-adventures-in-wonderland/john-tenniel/downloads/lewis-carroll_alices-adventures-in-wonderland_john-tenniel.epub?source=download"
     },
     {
-      "id": "gu-2600",
+      "id": "se-war-and-peace",
       "title": "War and Peace",
       "author": "Leo Tolstoy",
       "lang": "en",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/2600.epub3.images"
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/leo-tolstoy/war-and-peace/louise-maude_aylmer-maude/downloads/leo-tolstoy_war-and-peace_louise-maude-aylmer-maude.epub?source=download"
     },
     {
       "id": "gu-2000",
