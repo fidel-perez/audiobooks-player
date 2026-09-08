@@ -171,6 +171,11 @@ export const PIPER_VOICES = [
   { id: "es_ES-carlfm-x_low", label: "Carlos (rápida)", mb: 27 },
   { id: "es_ES-sharvard-medium", label: "Sharvard (calidad)", mb: 80 },
   { id: "es_ES-davefx-medium", label: "Davefx (calidad)", mb: 67 },
+  // English voices piper-tts-web ships (vendor/piper-tts-web.js's VOICE_IDS),
+  // sized off the same HuggingFace mirror as the Spanish ones above.
+  { id: "en_US-lessac-medium", label: "Lessac (English)", mb: 60 },
+  { id: "en_US-amy-medium", label: "Amy (English)", mb: 60 },
+  { id: "en_US-ryan-medium", label: "Ryan (English)", mb: 60 },
 ];
 
 // Where the library pulls models from, for the settings hint. The voices carry
