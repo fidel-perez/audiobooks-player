@@ -17,6 +17,7 @@
  */
 
 import { pushBackLayer } from "./modal.js";
+import { t } from "./i18n.js";
 
 /* ===================== confirm dialog ===================== */
 
@@ -34,8 +35,8 @@ export function confirmDialog(opts = {}) {
   const {
     title = "",
     message = "",
-    okLabel = "Aceptar",
-    cancelLabel = "Cancelar",
+    okLabel = t("Aceptar"),
+    cancelLabel = t("Cancelar"),
     danger = false,
     dismissValue = false,
   } = opts;
@@ -135,12 +136,12 @@ export function openSelectSheet(sel) {
   head.className = "modal-head";
   const h = document.createElement("h2");
   h.textContent =
-    sel.getAttribute("aria-label") || sel.dataset.ddTitle || "Seleccionar";
+    sel.getAttribute("aria-label") || sel.dataset.ddTitle || t("Seleccionar");
   const x = document.createElement("button");
   x.type = "button";
   x.className = "icon-btn";
   x.textContent = "✕";
-  x.title = "Cerrar";
+  x.title = t("Cerrar");
   head.append(h, x);
 
   const list = document.createElement("div");

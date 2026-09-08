@@ -68,8 +68,11 @@
            the modal on its loading state and fills in when the data lands (see
            openCatalog): the wait moves to the person who asked for it. -->
       <button id="catalogBtn" class="icon-btn" type="button"
-        title="Catálogo">📚</button>
-      <button id="settingsBtn" class="icon-btn" type="button" title="Ajustes">⚙️</button>
+        data-i18n-attrs="title" title="Catálogo">📚</button>
+      <button id="localeBtn" class="icon-btn" type="button"
+        title="Language / Idioma">🌐</button>
+      <button id="settingsBtn" class="icon-btn" type="button"
+        data-i18n-attrs="title" title="Ajustes">⚙️</button>
     </header>
 
     <!-- Source card: status + resume note. Books come from the 📚 catálogo (the
@@ -92,14 +95,14 @@
 
       <!-- Tap the bar to open the seek modal (manual slider + ±% fine steps). -->
       <div class="bar" id="seekBar" role="button" tabindex="0"
-        title="Tocar para ajustar la posición"><i id="progBar"></i></div>
+        data-i18n-attrs="title" title="Tocar para ajustar la posición"><i id="progBar"></i></div>
       <div class="meta">
         <span class="pct"><span id="pctNow">0</span>%</span>
         <span id="pageInfo"></span>
       </div>
       <div class="meta tiny">
         <span id="timeInfo">⏱ 00:00:00 / 00:00:00</span>
-        <span id="timeNote">(estimado)</span>
+        <span id="timeNote" data-i18n>(estimado)</span>
       </div>
 
       <!-- ⏮/⏭ moved INTO the 📍 Posición modal: a mistap on the player used to
@@ -111,7 +114,7 @@
       <!-- The on-screen speed readout/shortcut was removed from the player view;
            speed lives in the ⚙️ settings modal (⚡ Velocidad). -->
 
-      <div id="now"><small>El texto leído aparecerá aquí…</small></div>
+      <div id="now"><small data-i18n>El texto leído aparecerá aquí…</small></div>
     </div>
 
     <!-- Toast: the status line you can actually SEE. While a book is loaded the
@@ -154,14 +157,15 @@
            the rows landed. Full height from the first paint; the body scrolls. -->
       <div class="modal-panel modal-full" role="dialog" aria-label="En curso">
         <div class="modal-head">
-          <h2>📖 En curso</h2>
+          <h2 data-i18n>📖 En curso</h2>
           <!-- Day/night shelf toggle: each shelf keeps its OWN libros abiertos +
                en cola (see js/mode.js). Default night 🌙; tap to switch to day ☀️.
                The 📖 top-bar button is tinted blue/yellow to match. -->
           <button id="modeToggle" class="mode-toggle" type="button"
             title="Cambiar de estantería: noche 🌙 / día ☀️ (cada una tiene sus propios libros)">🌙 Noche</button>
           <span class="grow"></span>
-          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+          <button class="icon-btn" type="button" data-close
+            data-i18n-attrs="title" title="Cerrar">✕</button>
         </div>
         <div class="modal-body">
           <!-- Libro en progreso: the ONE book that is currently active (the book on
@@ -180,7 +184,7 @@
                  encabezado y no en la ficha: la ficha es la misma tarjeta en toda
                  la app y estos dos sólo existen aquí. Ambos preguntan antes,
                  nombrando adónde va el libro y cuál empieza. -->
-            <h3>▶️ Libro en progreso
+            <h3><span data-i18n>▶️ Libro en progreso</span>
               <button id="encNextBtn" class="bib-chip bib-act enc-hd-act" type="button"
                 title="Marcarlo leído (✔ Terminados recientemente) y empezar el primero de la cola — con la cola vacía no hace nada">⏭️ Siguiente</button>
               <button id="encFinishBtn" class="bib-chip bib-act enc-hd-act" type="button"
@@ -192,7 +196,7 @@
                🔜 En cola. Se oculta cuando no hay ninguno: el texto de la lista
                vacía ya lo dice, y un «0» ahí sólo repite la mala noticia. -->
           <section>
-            <h3>🎧 Libros abiertos <span id="encOpenCount" class="badge" hidden>0</span></h3>
+            <h3><span data-i18n>🎧 Libros abiertos</span> <span id="encOpenCount" class="badge" hidden>0</span></h3>
             <div id="encList" class="enc-list"></div>
           </section>
           <!-- ✔ Terminados recientemente: bandeja de entrada de lo que acabas de
@@ -224,7 +228,7 @@
                  fila ya es una ficha entera: una casilla permanente en cada una
                  añadía un control fijo para algo que se hace de vez en cuando.
                  Reordenar vive SÓLO aquí: las filas ya no llevan ▲▼. -->
-            <h3>🔜 En cola <span id="encQueueCount" class="badge" hidden>0</span>
+            <h3><span data-i18n>🔜 En cola</span> <span id="encQueueCount" class="badge" hidden>0</span>
               <button id="queueMultiChip" class="bib-chip enc-multi" type="button"
                 aria-pressed="false"
                 title="Multiselección: elegir varios libros y moverlos juntos (o clic derecho en un libro)">☑️</button>
@@ -236,25 +240,25 @@
                  no haya nada elegido; ✕ sale del modo. -->
             <div id="queueBulkBar" class="enc-bulk" hidden>
               <span id="queueBulkCount" class="badge">0</span>
-              <span class="enc-bulk-label">elegidos · tócalos en la lista</span>
+              <span class="enc-bulk-label" data-i18n>elegidos · tócalos en la lista</span>
               <span class="grow"></span>
               <button id="queueBulkTop" class="enc-move" type="button"
-                title="Subir la selección al principio de la cola">🔝</button>
+                data-i18n-attrs="title" title="Subir la selección al principio de la cola">🔝</button>
               <button id="queueBulkUp" class="enc-move" type="button"
-                title="Subir la selección un puesto">▲</button>
+                data-i18n-attrs="title" title="Subir la selección un puesto">▲</button>
               <button id="queueBulkDown" class="enc-move" type="button"
-                title="Bajar la selección un puesto">▼</button>
+                data-i18n-attrs="title" title="Bajar la selección un puesto">▼</button>
               <button id="queueBulkBottom" class="enc-move" type="button"
-                title="Bajar la selección al final de la cola">⤓</button>
+                data-i18n-attrs="title" title="Bajar la selección al final de la cola">⤓</button>
               <!-- 🗑 quita de la cola TODO lo elegido. Es la única forma de
                    quitar libros de la cola: las filas ya no llevan su propio 🗑,
                    igual que ya no llevan ▲▼. Siempre pregunta (nombrando el libro
                    o cuántos son): es lo único aquí que no se deshace tocando otra
                    vez. -->
               <button id="queueBulkDel" class="enc-move enc-danger" type="button"
-                title="Quitar de la cola los libros elegidos">🗑</button>
+                data-i18n-attrs="title" title="Quitar de la cola los libros elegidos">🗑</button>
               <button id="queueBulkClear" class="enc-move" type="button"
-                title="Salir de la multiselección">✕</button>
+                data-i18n-attrs="title" title="Salir de la multiselección">✕</button>
             </div>
             <!-- Veredicto de la última escritura de la cola. Un movimiento que no
                  llega al servidor dejaba la lista igual y en silencio, que es
@@ -274,13 +278,14 @@
       <div class="modal-panel" role="dialog" aria-label="Ajustes">
         <div class="modal-head">
           <div class="head-titles">
-            <h2>⚙️ Ajustes</h2>
+            <h2 data-i18n>⚙️ Ajustes</h2>
             <!-- When the running code was last changed, so a stale cache is
                  obvious (js/main.js renderBuildInfo). Tap to force-refresh. -->
             <button id="buildInfo" class="build-info" type="button"
               title="Actualización de la app · toca para forzar la recarga">Comprobando versión…</button>
           </div>
-          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+          <button class="icon-btn" type="button" data-close
+            data-i18n-attrs="title" title="Cerrar">✕</button>
         </div>
         <div class="modal-body">
 
@@ -291,13 +296,13 @@
                aparece al pulsar el ℹ️ del fondo. -->
           <section>
             <details id="voiceDetails" class="fold">
-              <summary><h3>🔊 Voz <span id="voiceSummary" class="badge"></span></h3></summary>
+              <summary><h3><span data-i18n>🔊 Voz</span> <span id="voiceSummary" class="badge"></span></h3></summary>
 
               <div class="row">
                 <div>
-                  <label for="voice">Voz</label>
+                  <label for="voice" data-i18n>Voz</label>
                   <select id="voice">
-                    <option value="device">Voz del móvil (Android)</option>
+                    <option value="device" data-i18n>Voz del móvil (Android)</option>
                   </select>
                 </div>
               </div>
@@ -317,7 +322,7 @@
                    así que van en su propio plegable en vez de ocupar la sección
                    entera para quien ya usa una voz descargada. -->
               <details id="deviceVoiceHelp">
-                <summary class="hint">Cómo cambiar la voz del móvil</summary>
+                <summary class="hint" data-i18n>Cómo cambiar la voz del móvil</summary>
                 <div class="hint">
                   La voz del móvil la elige Android, no esta app. Se configura una
                   sola vez, en los ajustes del móvil:
@@ -338,11 +343,11 @@
 
           <section>
             <details class="fold">
-              <summary><h3>🔈 Volumen <span id="volVal" class="badge">100%</span></h3></summary>
+              <summary><h3><span data-i18n>🔈 Volumen</span> <span id="volVal" class="badge">100%</span></h3></summary>
               <div class="range-wrap">
-                <button class="sec sm" id="volDown" title="Bajar 5%">🔉</button>
+                <button class="sec sm" id="volDown" data-i18n-attrs="title" title="Bajar 5%">🔉</button>
                 <input type="range" id="vol" min="0" max="4" step="0.05" value="1">
-                <button class="sec sm" id="volUp" title="Subir 5%">🔊</button>
+                <button class="sec sm" id="volUp" data-i18n-attrs="title" title="Subir 5%">🔊</button>
               </div>
               <div class="hint prose" id="volHint"></div>
             </details>
@@ -353,10 +358,10 @@
                móvil la pinta Android fuera de la página. -->
           <section>
             <details class="fold">
-              <summary><h3>🎚️ Modulación <span id="modulationVal" class="badge"></span></h3></summary>
+              <summary><h3><span data-i18n>🎚️ Modulación</span> <span id="modulationVal" class="badge"></span></h3></summary>
               <div class="row">
                 <div>
-                  <label for="modulation">Tratamiento de picos</label>
+                  <label for="modulation" data-i18n>Tratamiento de picos</label>
                   <select id="modulation">
                     <option value="limite">Límite suave (recomendado)</option>
                     <option value="rapido">Rápido (comprime y suelta ya)</option>
@@ -387,7 +392,7 @@
                js/main.js#paintSettingsChips. -->
           <section>
             <details class="fold">
-              <summary><h3>⚡ Velocidad <span id="rateModalVal" class="badge">200%</span></h3></summary>
+              <summary><h3><span data-i18n>⚡ Velocidad</span> <span id="rateModalVal" class="badge">200%</span></h3></summary>
               <p id="rateScope" class="preset-scope"></p>
               <input type="range" id="rate" class="modal-range" min="0.8" max="3"
                 step="0.05" value="2" aria-label="Velocidad">
@@ -414,7 +419,7 @@
                («40 min · ↺15») para que el pliegue cerrado la diga. -->
           <section>
             <details class="fold">
-              <summary><h3>😴 Modo dormir <span id="sleepSummary" class="badge"></span></h3>
+              <summary><h3><span data-i18n>😴 Modo dormir</span> <span id="sleepSummary" class="badge"></span></h3>
                 <!-- El preajuste de la noche, en la cabecera para poder cambiarlo
                      sin desplegar nada: «normal» es 40 · ↺15 de fábrica, «corto»
                      30 · ↺8, y el corto vale UNA sola vez — al detenerse la lectura
@@ -516,7 +521,7 @@
                cerrado; #progressLogBody lo pinta js/logview.js al abrir el fold. -->
           <section>
             <details class="fold" id="progressDetails">
-              <summary><h3>📈 Registro de progreso <span id="progressSummary" class="badge"></span></h3></summary>
+              <summary><h3><span data-i18n>📈 Registro de progreso</span> <span id="progressSummary" class="badge"></span></h3></summary>
               <div class="plog-bar">
                 <button id="logModeToggle" class="mode-toggle" type="button"
                   title="Ver el registro de la estantería de noche 🌙 o de día ☀️">🌙 Noche</button>
@@ -538,10 +543,10 @@
                fall back to the local copy, writes just fail. -->
           <section>
             <details class="fold" id="syncDetails">
-              <summary><h3>🔗 Sincronización <span id="syncSummary" class="badge"></span></h3></summary>
+              <summary><h3><span data-i18n>🔗 Sincronización</span> <span id="syncSummary" class="badge"></span></h3></summary>
               <div class="row">
                 <div>
-                  <label for="syncUrl">URL del servidor</label>
+                  <label for="syncUrl" data-i18n>URL del servidor</label>
                   <input type="url" id="syncUrl" inputmode="url" autocomplete="off"
                     autocapitalize="off" spellcheck="false"
                     placeholder="https://tu-servidor.example">
@@ -559,7 +564,8 @@
                los ajustes queden limpios; este ℹ️ lo muestra/oculta de golpe. -->
           <div class="prose-toggle-wrap">
             <button id="proseToggle" class="prose-toggle" type="button"
-              aria-pressed="false" title="Mostrar u ocultar las explicaciones">ℹ️</button>
+              aria-pressed="false" data-i18n-attrs="title"
+              title="Mostrar u ocultar las explicaciones">ℹ️</button>
           </div>
 
           <section class="fine prose">
@@ -588,12 +594,14 @@
         <div class="modal-head bib-head">
           <div class="bib-filter-row">
             <button id="bibSearchBtn" class="bib-chip bib-act" type="button"
-                    title="Buscar por título o autor 🔍" aria-pressed="false">🔍</button>
+                    data-i18n-attrs="title" title="Buscar por título o autor 🔍" aria-pressed="false">🔍</button>
             <input id="bibSearch" class="bib-search" type="search" hidden
+                   data-i18n-attrs="placeholder,aria-label"
                    placeholder="Buscar título o autor…" autocomplete="off"
                    aria-label="Buscar por título o autor" />
           </div>
-          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+          <button class="icon-btn" type="button" data-close
+            data-i18n-attrs="title" title="Cerrar">✕</button>
         </div>
         <div class="modal-body">
           <div id="bibCount" class="bib-count"></div>
@@ -611,8 +619,9 @@
       <div class="modal-back" data-close></div>
       <div class="modal-panel" role="dialog" aria-label="Libro">
         <div class="modal-head">
-          <h2>Libro</h2>
-          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+          <h2 data-i18n>Libro</h2>
+          <button class="icon-btn" type="button" data-close
+            data-i18n-attrs="title" title="Cerrar">✕</button>
         </div>
         <div class="modal-body">
           <div id="bookMenuBody"></div>
@@ -631,9 +640,10 @@
       <div class="modal-back" data-close></div>
       <div class="modal-panel" role="dialog" aria-label="Ir a posición">
         <div class="modal-head">
-          <h2>📍 Posición <span id="seekVal" class="badge">0%</span>
+          <h2><span data-i18n>📍 Posición</span> <span id="seekVal" class="badge">0%</span>
             <span id="seekTime" class="badge badge-time">(0h:00m / 0h:00m)</span></h2>
-          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+          <button class="icon-btn" type="button" data-close
+            data-i18n-attrs="title" title="Cerrar">✕</button>
         </div>
         <div class="modal-body">
           <section>
@@ -653,15 +663,15 @@
             </div>
           </section>
           <!-- Immediate, no confirmation: these move the reader as you press. -->
-          <section class="para-step" aria-label="Párrafo">
+          <section class="para-step" aria-label="Párrafo" data-i18n-attrs="aria-label">
             <button type="button" class="sec" id="seekPrevPara"
-              title="Párrafo anterior (inmediato)">⏮ Párrafo</button>
+              data-i18n data-i18n-attrs="title" title="Párrafo anterior (inmediato)">⏮ Párrafo</button>
             <button type="button" class="sec" id="seekNextPara"
-              title="Párrafo siguiente (inmediato)">Párrafo ⏭</button>
+              data-i18n data-i18n-attrs="title" title="Párrafo siguiente (inmediato)">Párrafo ⏭</button>
           </section>
           <div class="modal-actions">
-            <button type="button" class="sec" id="seekCancel">Cancelar</button>
-            <button type="button" class="go" id="seekApply">Ir a esta posición</button>
+            <button type="button" class="sec" id="seekCancel" data-i18n>Cancelar</button>
+            <button type="button" class="go" id="seekApply" data-i18n>Ir a esta posición</button>
           </div>
         </div>
       </div>

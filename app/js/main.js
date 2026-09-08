@@ -127,11 +127,16 @@ import {
 } from "./piper.js";
 import { MODULATION, MODULATION_DEFAULT } from "./modulation.js";
 import { enhanceAllSelects } from "./ui.js";
+import { initI18n } from "./i18n.js";
 
 /* ===================== modals (settings + catalog) ===================== */
 wireModal("settingsModal");
 wireProgressLog();
 bindModalEsc();
+// Sweeps every [data-i18n] element to the stored locale, and wires 🌐 to flip
+// it. Runs before enhanceAllSelects so a dd-trigger's first label read is
+// already translated.
+initI18n($("localeBtn"));
 // Replace native <select> pickers with in-page dropdowns that can be dismissed
 // without committing a choice (native <select> can't, on iOS). Options that
 // populate later (voces/capítulos/categorías) sync via the observer in ui.js.
