@@ -532,6 +532,29 @@
                now baked in permanently (see js/pdf.js and js/cleanForSpeech.js),
                so their toggles were removed from here. -->
 
+          <!-- Sync: empty by default, so this device keeps everything in
+               IndexedDB alone (js/storage.js#getSyncServerUrl). Typing a URL
+               here and no server running there is a silent no-op — reads
+               fall back to the local copy, writes just fail. -->
+          <section>
+            <details class="fold" id="syncDetails">
+              <summary><h3>🔗 Sincronización <span id="syncSummary" class="badge"></span></h3></summary>
+              <div class="row">
+                <div>
+                  <label for="syncUrl">URL del servidor</label>
+                  <input type="url" id="syncUrl" inputmode="url" autocomplete="off"
+                    autocapitalize="off" spellcheck="false"
+                    placeholder="https://tu-servidor.example">
+                </div>
+              </div>
+              <div id="syncStatus" class="hint"></div>
+              <div class="hint prose">Vacío: todo se guarda en este dispositivo
+                (IndexedDB) y no sale de él. Con una URL, el progreso, la cola y
+                los ajustes se leen y escriben ahí en su lugar — esta app no
+                trae un servidor, hay que tener el propio.</div>
+            </details>
+          </section>
+
           <!-- Prose reveal: todo el texto explicativo (.prose) está oculto para que
                los ajustes queden limpios; este ℹ️ lo muestra/oculta de golpe. -->
           <div class="prose-toggle-wrap">

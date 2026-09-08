@@ -9,6 +9,7 @@ import { installPullToRefreshGuard } from "../_shared/ui/pullToRefreshGuard.js";
 import { acquireWake, watchPlaybackProtection } from "./background.js";
 import { idbGetAll } from "./db.js";
 import { hydrateAll } from "./pdf.js";
+import { getSyncServerUrl, setSyncServerUrl } from "./storage.js";
 import {
   isRendering,
   jumpToPct,
@@ -590,6 +591,22 @@ $("lang").addEventListener("change", () => {
   document.documentElement.lang = $("lang").value;
   voiceHintUpdate();
   restartCurrent();
+});
+
+/* ===================== sync-server URL ===================== */
+function paintSyncUi() {
+  const url = getSyncServerUrl();
+  $("syncSummary").textContent = url ? "servidor" : "local";
+  $("syncStatus").textContent = url
+    ? `Sincronizando con ${url}`
+    : "Guardando solo en este dispositivo.";
+}
+$("syncUrl").value = getSyncServerUrl();
+paintSyncUi();
+$("syncUrl").addEventListener("change", () => {
+  setSyncServerUrl($("syncUrl").value);
+  $("syncUrl").value = getSyncServerUrl(); // reflects the trim/trailing-slash strip
+  paintSyncUi();
 });
 
 /* ===================== rate / volume ===================== */
