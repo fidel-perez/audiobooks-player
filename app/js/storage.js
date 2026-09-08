@@ -17,6 +17,9 @@ import { idbGetMeta, idbSetMeta } from "./db.js";
 import { mergeServerMap } from "./progress-merge.js";
 
 const SYNC_URL_LS_KEY = "audiobooks:sync-server-url";
+// Mirrored into IndexedDB under this key too: sw.js runs with no localStorage
+// and needs the same URL to background-sync progress. See getSyncServerUrlIdb.
+export const SYNC_URL_META_KEY = "cfg:sync-server-url";
 const KV_PREFIX = "store:";
 
 export function getSyncServerUrl() {
@@ -27,6 +30,11 @@ export function getSyncServerUrl() {
   }
 }
 
+/** sw.js's counterpart to getSyncServerUrl: no localStorage there. */
+export async function getSyncServerUrlIdb() {
+  return (await idbGetMeta(SYNC_URL_META_KEY)) || "";
+}
+
 export function setSyncServerUrl(url) {
   const v = (url || "").trim().replace(/\/+$/, "");
   try {
@@ -35,6 +43,7 @@ export function setSyncServerUrl(url) {
   } catch (_e) {
     // private mode / blocked storage — still works, just unsynced
   }
+  idbSetMeta(SYNC_URL_META_KEY, v);
 }
 
 function jsonResponse(value, status = 200) {

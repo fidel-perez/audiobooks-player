@@ -6,6 +6,7 @@
 import { idbGetMeta, idbSetMeta } from "./js/db.js";
 import { mergeServerMap } from "./js/progress-merge.js";
 import { META_PROGRESS_KEY } from "./js/config.js";
+import { getSyncServerUrlIdb } from "./js/storage.js";
 
 // BUMP CACHE_NAME on any shipped change to force clients to refresh the shell.
 // v1: initial modular refactor (was the single-file lector-pdf-v14.html) —
@@ -605,7 +606,7 @@ import { META_PROGRESS_KEY } from "./js/config.js";
 // v215: a parked player stays parked across a reload and a shelf flip.
 //
 // v217: a held ▶ crosses to Música without the browser's leave-the-page confirm.
-const CACHE_NAME = "audiobooks-network-first-v234";
+const CACHE_NAME = "audiobooks-network-first-v235";
 
 // The Piper runtime — onnxruntime-web and the espeak-ng phonemiser — is tens of
 // MB and lives on CDNs the vendored library hardcodes. It is cached SEPARATELY,
@@ -645,14 +646,6 @@ const APP_SHELL_URLS = [
   "_shared/history/backGuard.js",
   "_shared/ui/pullToRefreshGuard.js",
   "_shared/ui/holdable.js",
-  "_shared/net/secureFace.js",
-  "_shared/net/faces.js",
-  "_shared/net/transport.js",
-  "_shared/platform.js",
-  "_shared/net/offlineChrome.js",
-  // js/progress.js asks it whether a resolved answer came off the network or out
-  // of the disk cache pi-shell keeps — see isStaleAnswer.
-  "_shared/net/connectivity.js",
   "js/main.js",
   "js/config.js",
   "js/settings.js",
@@ -679,6 +672,7 @@ const APP_SHELL_URLS = [
   "vendor/piper-tts-web.js",
   "vendor/piper-o91UDS6e.js",
   "vendor/voices_static-D_OtJDHM.js",
+  "js/storage.js",
   "js/db.js",
   "js/progress.js",
   "js/progress-merge.js",
@@ -703,9 +697,6 @@ const APP_SHELL_URLS = [
   "js/library.js",
   "js/modal.js",
   "js/biblioteca.js",
-  "js/reactions.js",
-  "js/wishlist.js",
-  "js/profile.js",
   "js/ui.js",
   "js/encurso.js",
   "_shared/clipboard/copyText.js",
@@ -877,19 +868,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // The progress blob is mutable state, never a cacheable asset. If we let
-  // network-first cache it, an OFFLINE boot would fall back to the stale cached
-  // 200 and the app would treat it as a real server read (progressReady=true),
-  // then push over fresher data. Go network-only so an offline GET fails cleanly
-  // and progressReady stays false until the store is genuinely reachable. Other
-  // /api/* blobs (favorites/reactions/queue) stay cacheable for offline reads.
-  // Same for the single-reader claim: it says who is reading RIGHT NOW, and a
-  // cached copy is a claim from the past. Served from the cache it would either
-  // pause a book nobody took, or hide a claim that was made — both worse than
-  // an offline GET that fails cleanly and leaves the local half in charge.
+  // The progress blob is mutable state, not a cacheable asset. A stale cached
+  // read would make the app believe progressReady=true and push over fresher
+  // data, so this is network-only: an offline GET fails cleanly instead. Other
+  // /kv/* blobs stay cacheable. Same for the single-reader claim — a cached
+  // copy would be a stale claim, pausing a book nobody took or hiding one
+  // that was made.
   if (
-    url.pathname === "/api/audiobooks-progress" ||
-    url.pathname === "/api/audiobooks-reader"
+    url.pathname === "/kv/audiobooks-progress" ||
+    url.pathname === "/kv/audiobooks-reader"
   ) {
     event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
@@ -952,14 +939,18 @@ async function flushProgressOnSync(event) {
   }
   if (!meta || !meta.map || !meta.dirty) return; // nothing unconfirmed to push
 
+  // No sync-server URL set → IndexedDB is the only store there is, and it
+  // already holds this map. Nothing to flush to.
+  const base = await getSyncServerUrlIdb();
+  if (!base) return;
+
   try {
     // Pull the server blob and merge (newer ts per book wins) IMMEDIATELY before
     // the PUT, to minimise the lost-update window vs a live tab. A failed/!ok GET
     // must NOT authorise a PUT (that would overwrite the store with our partial
     // map) — throw so Chromium retries with backoff.
-    const r = await fetch("/api/audiobooks-progress", {
+    const r = await fetch(`${base}/kv/audiobooks-progress`, {
       headers: { Accept: "application/json" },
-      credentials: "same-origin",
       cache: "no-store",
     });
     if (!r.ok) throw new Error("progress GET " + r.status);
@@ -973,10 +964,9 @@ async function flushProgressOnSync(event) {
     // even the background-sync path can only add/advance books, never wipe the
     // store with a partial map. The server folds `meta.map` into whatever it
     // holds; `merged` is only for refreshing the durable IndexedDB mirror below.
-    const push = await fetch("/api/audiobooks-progress", {
+    const push = await fetch(`${base}/kv/audiobooks-progress`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
       body: JSON.stringify({ _op: "progress_merge", entries: meta.map }),
     });
     if (!push.ok) throw new Error("progress merge-push " + push.status);
