@@ -554,167 +554,45 @@
          renders INLINE inside the 📈 Registro fold (see #progressDetails above and
          js/logview.js), so there is no separate modal here anymore. -->
 
-    <!-- ===================== Server-library browser modal ===================== -->
+    <!-- ===================== Catalog browser modal ===================== -->
+    <!-- 18 Standard Ebooks / Project Gutenberg titles from data/catalog.json —
+         no filter drawer, no gender/saga/wishlist chips: those narrowed an
+         88 000-book personal library and have nothing to narrow here. See
+         js/biblioteca.js. -->
     <div class="modal" id="bibModal" hidden>
       <div class="modal-back" data-close></div>
-      <div class="modal-panel modal-full" role="dialog" aria-label="Biblioteca del servidor">
-        <!-- Head is the ACTION bar (no title, to stay compact): 🎛️ opens the
-             filter drawer below, then 🔤 sort / 🔍 search / 🎲 random. The six
-             narrowing chips + gender + category live in #bibDrawer so the head
-             never wraps. Both are shown only when the catalog.json index is
-             served (see biblioteca.js); folder-fallback mode leaves them
-             hidden. The 🎛️ badge NAMES the active filters (🎛️ ♂ ⭐), so a
-             narrowed view is legible — and legible about WHICH filter narrowed
-             it — with the drawer shut. -->
+      <div class="modal-panel modal-full" role="dialog" aria-label="Catálogo">
         <div class="modal-head bib-head">
-          <div id="bibFilters" class="bib-filter-row" hidden>
-            <button id="bibFiltersBtn" class="bib-chip bib-act bib-drawer-btn" type="button"
-                    title="Filtros" aria-expanded="false" aria-controls="bibDrawer">🎛️<span
-                    id="bibFiltersOn" class="bib-badge" hidden aria-hidden="true"></span></button>
-            <!-- Cycles: 🔤 alfabético → 🆕 escrito (nuevo) → 🏺 escrito (viejo)
-                 → 📥 añadido. Label/emoji are painted by applySortUI. -->
-            <button id="bibSort" class="bib-chip bib-act" type="button">🔤</button>
+          <div class="bib-filter-row">
             <button id="bibSearchBtn" class="bib-chip bib-act" type="button"
                     title="Buscar por título o autor 🔍" aria-pressed="false">🔍</button>
             <input id="bibSearch" class="bib-search" type="search" hidden
                    placeholder="Buscar título o autor…" autocomplete="off"
                    aria-label="Buscar por título o autor" />
-            <button id="bibRandom" class="bib-chip bib-act" type="button"
-                    title="Destacar un libro al azar de estos filtros (tócalo para reproducir)">🎲</button>
-            <!-- 🌠 books wanted but NOT in the library; 📋 the whole taste
-                 profile (⭐/👍/👎/👤 + 🌠) as Markdown on the clipboard, to paste
-                 into an LLM. See js/wishlist.js + js/profile.js. -->
-            <button id="bibWish" class="bib-chip bib-act" type="button"
-                    title="Lista de deseos 🌠 (libros que no están en la biblioteca)">🌠</button>
-            <button id="bibCopy" class="bib-chip bib-act" type="button"
-                    title="Copiar mi perfil de gustos al portapapeles 📋 (para pegar en un LLM)">📋</button>
           </div>
           <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
-        </div>
-        <div id="bibDrawer" class="bib-drawer" hidden>
-          <div class="bib-group">
-            <span class="bib-glabel">Gusto</span>
-            <button id="bibFav" class="bib-chip" type="button"
-                    title="Solo libros favoritos ⭐" aria-pressed="false">⭐</button>
-            <button id="bibAuth" class="bib-chip" type="button"
-                    title="Solo autores favoritos 👤" aria-pressed="false">👤</button>
-            <button id="bibLike" class="bib-chip" type="button"
-                    title="Solo libros que me gustan 👍" aria-pressed="false">👍</button>
-            <button id="bibDislike" class="bib-chip" type="button"
-                    title="Solo libros que no me gustan 👎" aria-pressed="false">👎</button>
-          </div>
-          <div class="bib-group">
-            <span class="bib-glabel">Origen</span>
-            <button id="bibPrim" class="bib-chip" type="button"
-                    title="Solo primigenia" aria-pressed="false">🏛️</button>
-            <span class="bib-glabel">Estado</span>
-            <button id="bibDone" class="bib-chip" type="button"
-                    title="Solo libros leídos 📖" aria-pressed="false">📖</button>
-            <!-- One 3-state chip (♂ → ♀ → ⚥ todos) replaces the old ♂/♀ pair:
-                 selecting both or neither always meant "no gender constraint",
-                 so the pair only ever had three meanings; ⚥ is the default — the
-                 catalog is not silently half a catalog. Glyph/title/aria are
-                 repainted by applyGenderUI (GENDER_CHIP owns them; a title= here
-                 would just drift). -->
-            <span class="bib-glabel">Autor</span>
-            <button id="bibGender" class="bib-chip" type="button" aria-pressed="false">⚥</button>
-          </div>
-          <div class="bib-group bib-group-wide">
-            <select id="bibCat" class="bib-cat" title="Categoría">
-              <option value="">Todas las categorías</option>
-            </select>
-            <button id="bibClear" class="bib-clear" type="button" hidden
-                    title="Quitar todos los filtros">Limpiar</button>
-          </div>
         </div>
         <div class="modal-body">
           <div id="bibCount" class="bib-count"></div>
-          <!-- A–Z strip: with 88k books the pager alone is ~175 ‹/› taps to reach
-               the Z's, so browsing (rather than searching a name you already know)
-               was not possible. One tap lands on the page where that author-initial
-               starts. Only the 🔤 alfabético order files books by author, so
-               renderLetters hides the strip under the date sorts — and when the
-               whole set already fits on one page. -->
-          <div id="bibLetters" class="bib-letters" role="group"
-               aria-label="Saltar a la inicial del autor" hidden></div>
-          <div id="bibPath" class="bib-path"></div>
-          <!-- 🎲 spotlight: a single random pick from the current filters,
-               separate from the capped list. Re-roll with 🎲; tap to play. -->
-          <div id="bibPick" class="bib-pick" hidden></div>
           <div id="bibList" class="bib-list"></div>
-          <!-- Pager: shown only when the filtered set spills past one page
-               (RENDER_CAP per page). Prev/next walk the full result set. -->
-          <div id="bibPager" class="bib-pager" hidden></div>
         </div>
       </div>
     </div>
 
-    <!-- ===================== Saga + author-books modal ===================== -->
-    <!-- Opened by tapping the active-book card. Shows, in order: the book's saga
-         (Calibre series) start to end with a "🔜 Añadir saga a la cola" button in
-         its head, then every catalog book by the same author, grouped into
-         category sections so the shape of their work is visible. Rows are the
-         same cards as the biblioteca (tap to load, right-click to valorate — the
-         ✅ terminado toggle lives in that menu, not in this head). Opens
-         fullscreen (modal-full): both lists are long enough that a sheet hugging
-         its content just meant scrolling in a small box. -->
-    <div class="modal" id="authorModal" hidden>
+    <!-- ===================== Book menu modal ===================== -->
+    <!-- Opened by tapping (or right-clicking) any book card: ▶️ open, queue,
+         mark finished, clear progress, remove from "en curso". Replaces the pi
+         build's «Book and author» modal — there is no author index to browse
+         in an 18-title catalog. See js/biblioteca.js#openBookMenu. -->
+    <div class="modal" id="bookModal" hidden>
       <div class="modal-back" data-close></div>
-      <div class="modal-panel modal-full" role="dialog" aria-label="Saga y libros del autor">
+      <div class="modal-panel" role="dialog" aria-label="Libro">
         <div class="modal-head">
-          <h2 id="authorTitle">Book and author</h2>
-          <!-- The SAME día/noche shelf toggle as the 📖 En curso head (one shared
-               per-device mode — js/mode.js), repeated here because this modal is
-               where books get ADDED: 🔜 cola, the category bulk-add and the saga
-               button all queue onto the shelf `currentMode()` names. Without it
-               you had to close this modal, flip the shelf in En curso, and come
-               back. Wired next to its twin in js/encurso.js so the two can never
-               show different shelves. -->
-          <button id="authorModeToggle" class="mode-toggle" type="button"
-            title="Estantería a la que se añaden los libros: noche 🌙 / día ☀️ (toca para cambiar)">🌙 Noche</button>
-          <span class="grow"></span>
+          <h2>Libro</h2>
           <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
         </div>
         <div class="modal-body">
-          <div id="authorList" class="author-list"></div>
-        </div>
-        <!-- The way back out of this modal, in one visible control: deep in the
-             trail of books tapped INSIDE it, «← título» steps to the book
-             beneath; at the root, «← En curso» / «← Biblioteca» / «← Inicio»
-             names the screen the modal was opened over and closes back to it.
-             The browser's own back button is not that route — it is a guard
-             against leaving the app, not a labelled breadcrumb. The bar floats
-             over the panel rather than sitting in the list, so it stays put (and
-             tappable) wherever the list is scrolled — see syncAuthorBack in
-             js/biblioteca.js. -->
-        <button id="authorBack" class="author-back" type="button" hidden></button>
-      </div>
-    </div>
-
-    <!-- ===================== Wishlist modal ===================== -->
-    <!-- Books wanted that the pi library does NOT have. Entries live in the
-         `audiobooks-wishlist` json-store blob keyed by normalised author|title
-         (a wished book has no catalog path yet). An entry is never removed by
-         "getting" it: every load prunes the ones the catalog now answers for,
-         and so does the Telegram EPUB ingest. See js/wishlist.js. -->
-    <div class="modal" id="wishModal" hidden>
-      <div class="modal-back" data-close></div>
-      <div class="modal-panel" role="dialog" aria-label="Lista de deseos">
-        <div class="modal-head">
-          <h2>🌠 Lista de deseos</h2>
-          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="wish-add">
-            <input id="wishTitle" class="wish-input" type="text" placeholder="Título"
-                   autocomplete="off" aria-label="Título del libro deseado" />
-            <input id="wishAuthor" class="wish-input" type="text" placeholder="Autor"
-                   autocomplete="off" aria-label="Autor del libro deseado" />
-            <button id="wishAdd" class="bib-chip bib-act" type="button"
-                    title="Añadir a la lista de deseos">➕</button>
-          </div>
-          <div id="wishCount" class="bib-count"></div>
-          <div id="wishList" class="bib-list"></div>
+          <div id="bookMenuBody"></div>
         </div>
       </div>
     </div>
