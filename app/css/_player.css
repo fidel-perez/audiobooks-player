@@ -1,0 +1,257 @@
+/*
+ * Player chrome: library tabs, progress bar, time/meta, notes, and the
+ * "now reading" transcript panel.
+ */
+
+/* ---------- library tabs ---------- */
+#tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tab {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--chip-fg);
+  cursor: pointer;
+  background: var(--chip-bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.tab .nm {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab .pp {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.tab.active {
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.tab.active .pp {
+  color: #dbeafe;
+}
+
+.tab .x {
+  padding: 0 2px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.tab .x:hover {
+  opacity: 1;
+}
+
+/* Chapter picker sits above the progress bar when the doc has an outline. */
+#chapWrap {
+  margin-bottom: 8px;
+}
+
+/* Skipped front/back matter: shown so you know it exists, but greyed + inert. */
+#chapter option.chap-skip {
+  color: var(--muted, #8a8a8a);
+  font-style: italic;
+}
+
+/* ---------- progress + time ---------- */
+.bar {
+  height: 9px;
+  overflow: hidden;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.bar > i {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 5px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.meta.tiny {
+  margin-top: 2px;
+  font-size: 0.74rem;
+}
+
+.pct {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--txt);
+}
+
+/* ---------- notes ---------- */
+#status {
+  min-height: 1.1em;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--warn);
+}
+
+#resumeNote {
+  min-height: 1em;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--accent2);
+}
+
+/* ---------- toast ---------- */
+/* The active-book card hides #status while a book is loaded, so the toast is the
+   status surface during playback (js/dom.js). Explicit [hidden] rule because the
+   flex display would otherwise beat the attribute — same reason .book-card and
+   .sync-banner carry one. */
+.toast {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.toast[hidden] {
+  display: none;
+}
+.toast-msg {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The ↩ back-out of an auto-advance. Sized down out of the bare `button` rule
+   (flex:1, 0.95rem) so it sits inside the line instead of stretching it. */
+.toast-undo {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Active-book card living in the source card. Reuses the biblioteca .bib-row /
+   .bib-item look (and its right-click popover, which anchors on the relative
+   .bib-row); the 📖 glyph marks it as the currently-open book. */
+.book-card[hidden] {
+  display: none;
+}
+.book-card-item {
+  cursor: pointer;
+}
+
+/* No-book placeholder: a full-width, card-styled button that takes the #bookCard
+   slot when nothing is loaded and opens the 📖 "En curso" modal (where you pick
+   what to read). Reads as the card it stands in for — same ground, border and
+   radius — but as an obvious tap target, not a filled book row. */
+.book-card-empty {
+  width: 100%;
+  padding: 14px 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--txt);
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+.book-card-empty:active {
+  background: var(--input-bg);
+}
+
+/* Boot's third state for the same slot: "still finding out", between the empty
+   call-to-action and a real book card. Same box, so the card that replaces it
+   does not move anything; a slow pulse and the muted colour are what say this
+   one is waiting rather than offering. It is a <div>, not a button — there is
+   nothing to press yet — hence the cursor reset. */
+.book-card-loading {
+  color: var(--muted, var(--txt));
+  cursor: default;
+  animation: bookCardPulse 1.4s ease-in-out infinite;
+}
+@keyframes bookCardPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-card-loading {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* ---------- now reading ---------- */
+#now {
+  /* Held, it flips the shelf, and Android answers a long press on
+     text with a selection and a callout. Scrolling stays: no `touch-action`. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  max-height: 74px;
+  margin-top: 8px;
+  padding: 8px;
+  overflow: auto;
+  font-size: 0.84rem;
+  color: var(--now-fg);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* On phones, let the transcript grow to fill whatever vertical space is left
+   below the controls instead of being a cramped 74px box. The body becomes a
+   full-height flex column, the controls card grows into it, and #now takes the
+   remaining slack. Modals/overlay are position:fixed, so they stay out of this
+   flow. */
+@media (max-width: 640px) {
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  #controls:not([hidden]) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  #now {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+}

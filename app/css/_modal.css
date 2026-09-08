@@ -1,0 +1,1863 @@
+/*
+ * Overlay modals: the ⚙️ settings sheet and the 📚 server-library browser.
+ * Both use the same shell (.modal > .modal-back + .modal-panel).
+ */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* The shared top gap (_shared/ui/modal-top.css) is for top-justified
+     sheets. These dock to the bottom or hang from the very top edge, and a
+     padded container would push a full-height panel's head below the fold. */
+  padding-top: 0;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal-back {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  /* dvh (not vh) so the sheet fits the *visible* viewport on mobile — with the
+     browser's URL bar showing, vh overshoots and pushes the head (✕ button)
+     above the fold where it can't be tapped. Older browsers fall back to vh.
+     100 (not 88): a long list runs all the way to the top of the screen instead
+     of leaving a dead strip of backdrop above it. This is a CEILING, not a
+     height — a short sheet (⚙️ Ajustes) still hugs its content at the bottom, so
+     the modals are still sheets, not fullscreen pages. */
+  max-height: 100vh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -6px 24px var(--shadow);
+}
+
+/* A panel that opens FULLSCREEN instead of hugging its content (the saga +
+   author modal). max-height above is a ceiling; this turns it into the height,
+   so the body is a tall scroller from the first paint and the list doesn't grow
+   the sheet upward as it fills. Squares off the bottom corners: at full height
+   there is no backdrop below them to round against. */
+.modal-panel.modal-full {
+  height: 100vh;
+  height: 100dvh;
+  border-radius: 0;
+}
+
+/* ⚙️ AJUSTES HANGS FROM THE TOP, not from the bottom like every other sheet.
+   Its rows are deliberately tall (see the block at the foot of this file) and a
+   bottom-docked panel grows UPWARDS as sections unfold: the control you just
+   tapped travels up the screen while your thumb stays put, which is how you
+   toggle the wrong row. Anchored at the top, unfolding pushes DOWN and away from
+   everything already decided, and the head (✕) is always in the same place.
+   The id outranks the ≥560px centring below on purpose — the same argument holds
+   on a desktop, where the sheet would otherwise re-centre on every fold. */
+#settingsModal {
+  align-items: flex-start;
+}
+#settingsModal .modal-panel {
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 6px 24px var(--shadow);
+}
+
+/* On wider screens, center the sheet instead of docking it to the bottom. */
+@media (min-width: 560px) {
+  .modal {
+    align-items: center;
+    padding: 16px;
+  }
+  /* The settings sheet floats clear of the top edge here, so it rounds all four
+     corners again — it needs its own rule to beat the id selector above. */
+  #settingsModal .modal-panel {
+    border-radius: 16px;
+  }
+  .modal-panel {
+    border-radius: 16px;
+    /* The centred sheet keeps its 16px gutter, so its ceiling must exclude it —
+       otherwise a full-height panel overflows the padded flex container. */
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+  /* Desktop: "fullscreen" means the tallest the padded container allows, still
+     rounded and centred — a true edge-to-edge panel on a wide monitor would be a
+     640px column of content in an ocean of card. */
+  .modal-panel.modal-full {
+    height: calc(100vh - 32px);
+    height: calc(100dvh - 32px);
+    border-radius: 16px;
+  }
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/* Stacked title + "última actualización" subline in the ⚙️ Ajustes head. */
+.head-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.build-info {
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--muted);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.build-info.stale {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* Day/night shelf toggle in the 📖 En curso head (tint via .mode-* in _base.css). */
+.mode-toggle {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin-left: 8px;
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-toggle:active {
+  transform: scale(0.96);
+}
+
+.modal-body {
+  padding: 12px 14px 16px;
+  overflow-y: auto;
+}
+
+/* In a fixed-height (.modal-full) panel the body must claim the leftover space
+   and be allowed to shrink below its content — min-height:0, or the flex item's
+   auto minimum keeps it at full content height and the PANEL scrolls (pushing
+   the head off-screen) instead of the list. */
+.modal-full .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.modal-body section {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.modal-body section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.modal-body h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.badge {
+  padding: 1px 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+/* ---------- collapsible settings sections (<details class="fold">) ---------- */
+/* The whole title row IS the toggle. The native disclosure ▸ rendered on its own
+   line and pushed a one-word title ("Voz") onto a second row; we kill it and draw
+   our own caret at the END of the row, so title + badge + caret sit on ONE line. */
+.fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none; /* Firefox marker */
+  -webkit-tap-highlight-color: transparent;
+}
+.fold > summary::-webkit-details-marker {
+  display: none; /* Safari/old-Chrome marker */
+}
+/* The h3 no longer owns the row's bottom margin (it split the closed title from
+   its controls); the caret and the open-state margin below do the spacing. */
+.fold > summary h3 {
+  flex: 1 1 auto;
+  margin: 0;
+}
+.fold > summary::after {
+  content: "▸";
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+  transition: transform 0.15s ease;
+}
+.fold[open] > summary::after {
+  transform: rotate(90deg);
+}
+/* Space the revealed controls from the title only while open. */
+.fold[open] > summary {
+  margin-bottom: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold > summary::after {
+    transition: none;
+  }
+}
+
+/* ---------- ⚙️ Ajustes: rows sized for a thumb in the dark ---------- */
+/* Roughly DOUBLE the height of every row in the settings sheet. This is not
+   styling for its own sake: these controls are used at 3 a.m., one-handed, on a
+   phone held above a face, and the 😴 preset chip is now among them — a mistap
+   there arms or disarms the wrong night. The default 35 px row is a 44 px target
+   with nothing between it and its neighbour; this is ~60 px with real space in
+   between, so a thumb that lands slightly off lands on nothing rather than on the
+   next setting. Scoped to #settingsModal: the biblioteca's dense filter bar wants
+   the opposite (many controls on one line) and shares these classes. */
+#settingsModal .modal-body section {
+  padding: 16px 0;
+}
+#settingsModal .fold > summary {
+  min-height: 56px;
+}
+#settingsModal .modal-body label {
+  margin-bottom: 6px;
+  font-size: 0.84rem;
+}
+#settingsModal .modal-body select,
+#settingsModal .modal-body input[type="number"],
+#settingsModal .modal-body input[type="text"],
+#settingsModal .modal-body .dd-trigger {
+  padding: 19px 11px;
+  /* The gap IS the target: rows that touch are rows that can be hit by accident,
+     which is the whole point of the taller sheet. */
+  margin-bottom: 12px;
+}
+
+/* ---------- 😴 the night's preset chip (in the section header) ---------- */
+/* Lives inside the <summary> so the preset can be switched without unfolding
+   anything — the one control in this panel you reach for half asleep. Pressed =
+   the SHORT run is armed, which is a one-shot: it un-presses itself when the
+   book stops. Sized for a mistap-proof target, like the rows around it. */
+.preset-toggle {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* --warn, not --accent: the badge beside it is already accent-blue, and these two
+   say different things — the badge is the configuration, this is a TEMPORARY
+   override of it. Same colour for both would read as one wide blue blob in the
+   header, which is the opposite of a control you can find half asleep. */
+.preset-toggle[aria-pressed="true"] {
+  color: #fff;
+  background: var(--warn);
+  border-color: var(--warn);
+}
+.preset-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.preset-toggle:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Which preset the two dropdowns underneath are editing. NOT .prose and not
+   .hint: with «⏱️ Corto» armed those controls show a different pair of numbers,
+   and a panel whose values moved with nothing on screen saying why reads as a bug.
+   Warn-coloured and bordered only in that case (.is-short), because the normal
+   preset needs no announcement — it is what the section has always shown. */
+.preset-scope {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.preset-scope.is-short {
+  padding: 6px 10px;
+  color: var(--txt);
+  border-left: 3px solid var(--warn);
+  border-radius: 4px;
+  background: var(--input-bg);
+}
+
+/* ---------- collapsible prose (the ℹ️ reveal) ---------- */
+/* Every explanatory line in ⚙️ Ajustes is .prose and hidden by default, so the
+   sheet is controls-only; the #proseToggle at the foot flips .show-prose on the
+   body to reveal them all at once. The selector outranks .hint/.fine's own
+   display, so those don't need touching. */
+.modal-body:not(.show-prose) .prose {
+  display: none;
+}
+.prose-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+.prose-toggle {
+  min-width: 44px;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  opacity: 0.7;
+  -webkit-tap-highlight-color: transparent;
+}
+.prose-toggle[aria-pressed="true"] {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The "(1h:05m / 8h:40m)" clock beside the 📍 Posición %: secondary to the
+   percentage, and free to wrap under it on a narrow phone. */
+.badge-time {
+  color: var(--muted);
+  background: transparent;
+  padding: 1px 0;
+  font-weight: 600;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.fine {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.fine > div + div {
+  margin-top: 6px;
+}
+
+/* Numbered how-to inside a .hint (the Android text-to-speech setup steps). */
+.steps {
+  margin: 6px 0 6px 0;
+  padding-left: 1.2em;
+}
+
+.steps li {
+  margin: 4px 0;
+}
+
+/* ---------- biblioteca filter bar ---------- */
+/* The modal head IS the action bar (no title): 🎛️ 🔤 🔍 🎲 + ✕. The narrowing
+   chips live in .bib-drawer below, so this row stays one line on a phone. */
+.bib-head {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bib-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Emoji toggle chip. Pressed = active filter (aria-pressed drives the look). */
+.bib-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Opt out of the global `button { flex: 1 }` (_controls.css): a chip holds one
+     glyph, so it should hug it. Back when the bar carried 13 controls the growth
+     was invisible; with five it would smear them across the head. The category
+     select and the 🔍 input still grow — they're the ones with text to show. */
+  flex: 0 0 auto;
+  min-width: 38px;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  opacity: 0.55;
+  filter: grayscale(0.6);
+  transition: opacity 0.12s, filter 0.12s, border-color 0.12s;
+}
+
+.bib-chip[aria-pressed="true"] {
+  opacity: 1;
+  filter: none;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* Action chip (🎲 random) — not a toggle, so always shown at full strength. */
+.bib-chip.bib-act {
+  opacity: 1;
+  filter: none;
+}
+
+/* 🎛️ drawer toggle: full-strength like the other action chips, but it also
+   carries the active-filter badge and lights up (accent) while the drawer is
+   open — the one chip whose "pressed" look tracks aria-expanded, not a filter. */
+.bib-drawer-btn[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* The narrowing filters that are ON, as glyphs ("♂ ⭐"). A bare count never said
+   WHICH one, so the gender chip could sit on ♂ — half the catalog gone — behind a
+   badge reading "1". Several glyphs don't fit a corner pill, so it rides INSIDE the
+   🎛️ chip and the chip grows with it: .bib-chip is flex:0 0 auto and .bib-filter-row
+   wraps, so the chips beside it keep their size. Empty ⇒ hidden (see applyBadge). */
+.bib-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  padding: 0 6px;
+  height: 20px;
+  font-size: 0.78rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border: 1px solid var(--card);
+  border-radius: 999px;
+}
+
+/* Setting `display` above beats the UA sheet's [hidden] rule — restate it, or an
+   empty pill sits on the 🎛️ chip forever. */
+.bib-badge[hidden] {
+  display: none;
+}
+
+/* The 🎛️ chip is accent-filled while open, so an accent badge would vanish
+   into it. Invert. */
+.bib-drawer-btn[aria-expanded="true"] .bib-badge {
+  color: var(--accent);
+  background: var(--card);
+  border-color: var(--accent);
+}
+
+/* ---------- biblioteca filter drawer ---------- */
+/* Sits between the head and the scrolling body: grouped rows of the chips the
+   head used to carry. Collapsed by default (uncrowded head); the 🎛️ badge is
+   what tells you filters are on while it's shut. */
+.bib-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  animation: bib-drawer-in 0.16s ease-out;
+}
+
+.bib-drawer[hidden] {
+  display: none;
+}
+
+@keyframes bib-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bib-drawer {
+    animation: none;
+  }
+}
+
+.bib-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Section caption ("Gusto", "Origen", …). Sized so the chips, not the words,
+   are what the eye lands on. */
+.bib-glabel {
+  margin-right: 2px;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bib-glabel:not(:first-child) {
+  margin-left: 8px;
+}
+
+.bib-group-wide .bib-cat,
+.bib-group-wide .dd-trigger {
+  flex: 1;
+}
+
+/* "Limpiar" — resets every narrowing filter. Only rendered when at least one
+   is on (see applyBadge), so it never invites a no-op tap. */
+.bib-clear {
+  flex: 0 0 auto; /* the category select beside it takes the slack */
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--muted);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.bib-clear:hover {
+  color: var(--txt);
+  border-color: var(--accent);
+}
+
+.bib-cat {
+  flex: 1;
+  min-width: 140px;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 0.84rem;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* 🔍 free-text search input, revealed by the 🔍 chip. Sits inline in the
+   filter row; grows to fill the space like the category select. */
+.bib-search {
+  flex: 1 1 140px;
+  min-width: 120px;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 0.84rem;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.bib-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.bib-count {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+/* The author count line doubles as a whole-author bulk-queue head: text left,
+   the 🔝 / ⬇️ pair hard right. Wraps on a narrow phone like the saga head. */
+.bib-count.author-count-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* A–Z jump strip under the count: one button per author-initial the FILTERED set
+   holds (see renderLetters). Wraps rather than scrolling sideways — a letter you
+   have to swipe to find is a letter you won't use. Shown only in 🔤 alphabetical
+   order, and only when the set spills past one page. */
+.bib-letters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 2px;
+}
+/* An author rule beats the UA's `[hidden] { display: none }`, so the flex box has
+   to hide itself explicitly — otherwise an empty 6px-margin box sits under the
+   count in folder mode and under every narrow filter. */
+.bib-letters[hidden] {
+  display: none;
+}
+.bib-letter {
+  /* Opt out of the global `button { flex: 1 }` (_controls.css): 27 stretched,
+     accent-filled letters would smear across the row. Same trap as .bib-chip. */
+  flex: 0 0 auto;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+/* The initial the page you are on opens with. */
+.bib-letter[aria-current="true"] {
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- biblioteca browser ---------- */
+.bib-path {
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.bib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 🎲 spotlight row: one random pick, set apart from the list by an accent
+   frame + a dashed divider below it. Tap the card to play, 🎲 to re-roll. */
+.bib-pick {
+  margin: 8px 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.bib-pick-item {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+/* A catalog row = load button + live ⭐ degree control side by side. Nested
+   buttons are invalid, so the star sits as a sibling, not inside .bib-item. */
+.bib-row {
+  position: relative; /* anchors the per-row .bib-pop popover */
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.bib-row .bib-item {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Per-row state cues (no more emoji buttons): the card's look encodes the book's
+   rating. Signature colours are mirrored on the popover buttons so the mapping is
+   easy to recall. Shared by every book card — the biblioteca list/spotlight, the
+   active-book card, the author list, AND both en-curso shelves — so a book's
+   status reads the same wherever it appears. */
+/* favorite author → a blue inset ring (the band that used to mark "en cola").
+   The old saturated blue BACKGROUND now belongs to the Libro-en-progreso card
+   (.st-reading), so the author cue moved to a ring instead — drawn as the inner
+   ::after band (see below) so it can still stack under a rating ring. */
+/* Rating ring (outer): a wide INSET shadow — NOT a real border — so it reads as a
+   fat coloured band that eats INWARD from the card edge without ever changing the
+   card's size or reflowing its contents (the base 1px border stays put beneath
+   it). Exclusive by construction (loved > disliked > liked). Favorite ⭐ and liked
+   👍 share one colour — yellow = "I like this", either degree. */
+.st-loved,
+.st-liked {
+  box-shadow: inset 0 0 0 4px #f1c40f; /* favorite OR liked → yellow */
+}
+.st-disliked {
+  box-shadow: inset 0 0 0 4px #c0392b; /* disliked → red */
+}
+.st-done {
+  /* finished (✔) → gently dimmed; the trailing ✔ tag carries the state */
+  opacity: 0.72;
+}
+/* Inner pseudo-element band, nested just INSIDE any rating ring so a book can be
+   both rated AND favorite-author and show both bands at once. Inset → zero
+   reflow. Now carries the favorite-author cue (was the queued cue). */
+.bib-item {
+  position: relative; /* anchors the inner ::after band */
+}
+.st-favauth::after {
+  content: "";
+  position: absolute;
+  inset: 4px; /* nests just inside the 4px rating ring */
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 3px #3498db; /* favorite author → blue ring */
+}
+/* Libro en progreso (the ONE book the player holds) → the saturated blue
+   background wash it used to carry before the en-curso revamp. No green ring
+   anymore: the wash alone marks "esto es lo que estoy leyendo ahora". */
+.st-reading {
+  background: rgba(41, 98, 255, 0.34) !important;
+}
+/* .st-queued → NO marker for now (the queue is short; the 📖 shelf lists it). */
+/* Trailing ✔ "terminado" tag; flex pushes it to the row's right edge. */
+.bib-check {
+  flex: 0 0 auto;
+  align-self: center;
+  padding-left: 6px;
+  color: #2ecc71;
+  font-size: 0.95rem;
+}
+
+/* Pager under the list: prev/next + "page N / M". */
+.bib-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.bib-page-btn {
+  min-width: 96px;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.84rem;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.bib-page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.bib-page-lbl {
+  font-size: 0.8rem;
+  color: var(--muted);
+  min-width: 56px;
+  text-align: center;
+}
+
+/* Popover of the four individual controls, anchored under the mark button. */
+.bib-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px var(--shadow);
+}
+
+.bib-pop-btn {
+  min-width: 40px;
+  height: 36px;
+  /* border-box so a fatter signature border eats inward instead of growing the
+     button (keeps the row width + icon position identical). */
+  box-sizing: border-box;
+  padding: 0 6px;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  opacity: 0.55;
+  filter: grayscale(0.6);
+  transition: opacity 0.12s, filter 0.12s, border-color 0.12s;
+}
+
+/* Each control now carries TWO independent cues:
+   - BORDER = the signature colour the CARD will take on, so the "what will this
+     do to the shelf" hint survives: ⭐/👍 yellow, 👤 blue, 👎/🗑 red,
+     🔜 blue (queued ring), ✅ green (finished). Easy to remember at a glance.
+   - BACKGROUND = whether the mark is currently ACTIVE: green wash when on,
+     grey when off. So the fill answers "is it set?" and the border answers
+     "what colour does it give". */
+.bib-pop-btn.star,
+.bib-pop-btn.auth,
+.bib-pop-btn.like,
+.bib-pop-btn.dislike,
+.bib-pop-btn.queue-top,
+.bib-pop-btn.queue-bot,
+.bib-pop-btn.done,
+.bib-pop-btn.leido,
+.bib-pop-btn.clear,
+.bib-pop-btn.shelf,
+.bib-pop-btn.trash,
+.bib-pop-btn.triage {
+  opacity: 1;
+  filter: none;
+  background: rgba(128, 133, 137, 0.18); /* off → grey */
+}
+/* Signature-coloured controls carry a fat 4px border so the colour hint reads
+   loud; box-sizing keeps it from resizing the button. Grey action buttons
+   (clear/trash) keep the base 1px. */
+.bib-pop-btn.star,
+.bib-pop-btn.auth,
+.bib-pop-btn.like,
+.bib-pop-btn.dislike,
+.bib-pop-btn.queue-top,
+.bib-pop-btn.queue-bot,
+.bib-pop-btn.done,
+.bib-pop-btn.leido {
+  border-width: 4px;
+}
+.bib-pop-btn.star {
+  border-color: #f1c40f;
+}
+.bib-pop-btn.auth {
+  border-color: #5b6ee1;
+}
+.bib-pop-btn.like {
+  border-color: #f1c40f;
+}
+.bib-pop-btn.dislike {
+  border-color: #c0392b;
+}
+.bib-pop-btn.queue-top,
+.bib-pop-btn.queue-bot {
+  border-color: #3498db;
+}
+.bib-pop-btn.done,
+.bib-pop-btn.leido {
+  border-color: #2ecc71;
+}
+
+/* Active mark → green wash (the queue pair's "on" is the .is-queued class — the
+   book is already queued, so the control re-seats it instead of adding it — the
+   rest use aria-pressed). Border keeps the signature colour underneath. The wash
+   is a loud, saturated green so "on" reads unmistakably at a glance. */
+.bib-pop-btn.star[aria-pressed="true"],
+.bib-pop-btn.auth[aria-pressed="true"],
+.bib-pop-btn.like[aria-pressed="true"],
+.bib-pop-btn.dislike[aria-pressed="true"],
+.bib-pop-btn.done[aria-pressed="true"],
+.bib-pop-btn.leido[aria-pressed="true"],
+.bib-pop-btn.is-queued {
+  background: rgba(34, 197, 94, 0.62);
+}
+
+/* The queue pair is never locked: a queued book's 🔝/⬇️ RE-SEAT it from any
+   card (biblioteca.js), so there is no greyed "ya está en la cola" state left to
+   style — the green .is-queued above is the whole story. */
+
+.bib-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  /* border-box so a state's fatter (3px) border doesn't reflow the row */
+  box-sizing: border-box;
+  padding: 10px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--txt);
+  text-align: left;
+  cursor: pointer;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* A book card is a tap / long-press target, not text: never let a long-press
+   start a text selection. Long-pressing a card opens its right-click menu, and a
+   selection fought that (it grabbed the title instead of the menu) — plus iOS
+   popped its own text callout. Applies to every book card and its menu buttons
+   (biblioteca list, 🎲 spotlight, active-book card, author list, en-curso). */
+.bib-item,
+.bib-author-link,
+.bib-pop-btn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.bib-item .ico {
+  flex: 0 0 auto;
+}
+
+/* Title + author + saga + progress bar stacked so long names show in full,
+   un-truncated. */
+.bib-item .lbl {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bib-title {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+/* First line WITH a year: the title, plus the year pushed to the far RIGHT of the
+   same line. `baseline` so a wrapped two-line title keeps the year level with its
+   FIRST line (the reading order is "título … 1968"), not floating beside its
+   middle. Only .has-year flexes — the hand-built rows that set .bib-title's text
+   directly (saga holes, 🌠 wishlist) have no .bib-title-text to carry min-width:0,
+   and flexing them would let a long unbroken title overflow the row. */
+.bib-title.has-year {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.bib-title-text {
+  min-width: 0;
+}
+/* The year the book was written. Dark green (darker than the saga's --accent2, so
+   the two tinted bits of a card don't read as one), tabular so a column of years
+   lines up, and never wrapped or shrunk — the title yields first. */
+.bib-year {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #14532d;
+  white-space: nowrap;
+}
+/* Second line of every card — and, hand-built, of the saga HOLE rows («No está en
+   la biblioteca») and the 🌠 wishlist rows, which are not book cards and so are
+   plain captions with no .bib-author-link on them. */
+.bib-author {
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* The author line is a plain caption now (.bib-author above). It used to be a
+   navigation target — tapping the name opened that writer's other books — with a
+   dotted underline + › to say "tappable"; that browse moved to the right-click
+   menu's 💬 (the one affordance for it), so the underline, the chevron and the
+   .bib-author-link / -name / -go markup are all gone. */
+/* "📜 <saga> · nº 3" — third line, saga books only. Tinted (not muted like the
+   author) so which books belong to a series reads off any list at a glance. */
+.bib-saga {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--accent2);
+  overflow-wrap: anywhere;
+}
+
+/* Reading progress, en-curso "libros abiertos" cards: a thin bar as the label
+   column's last line, plus the "63%" badge in the card's trailing chip slot. */
+.bib-bar {
+  height: 4px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.bib-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.bib-pct {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.bib-item.up {
+  color: var(--muted);
+}
+
+.bib-empty {
+  padding: 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* The empty list, when filters (or a 🔍 query) are what emptied it: the note is
+   the button that undoes them. Styled as the note it replaces — it is still a
+   sentence, not a call to action competing with the list — but with a full
+   touch target and a second line that says what tapping does. */
+.bib-empty-clear {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-height: 64px;
+  border: 0;
+  background: none;
+  /* Not `font: inherit`: the shorthand would also reset the .bib-empty size
+     this shares, and the note must not grow just because it became a button. */
+  font-family: inherit;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.bib-empty-cta {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* "The catalog didn't load" + its way out. Louder than a .bib-empty note
+   because it is not a note: it is the explanation for a view that otherwise
+   reads as a different, broken app (folder mode), and it sits at the top of a
+   list the reader is about to scroll past. The button is a full touch target —
+   this is the one control on the screen that can bring the real 📚 back. */
+.bib-catalog-retry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.bib-retry-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bib-retry-btn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+/* ---------- author-books modal ---------- */
+/* Breadcrumb back chip. Absolute inside the panel (which is position:relative),
+   NOT in the scrolling body: the trail can be several books deep and the reader
+   is usually far down a long author list when they want to step back, so the
+   control has to stay on screen instead of scrolling away with the content.
+   Docked bottom-centre, clear of the iOS home indicator, and above the list. */
+/* Deliberately loud: this is the ONLY reliable way back out of the trail, so it
+   is a full-width-ish accent bar, not a subtle chip — thumb-sized (min-height
+   well past the 44px touch target), accent-filled so it separates from the cards
+   scrolling under it, and legible at arm's length. */
+.author-back {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  width: min(88%, 460px);
+  min-height: 54px;
+  padding: 14px 24px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--accent);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  box-shadow: 0 6px 22px var(--shadow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* One line, ellipsised: the label carries the title of the book it returns to,
+     which can be long. */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.author-back:active {
+  transform: translateX(-50%) scale(0.96);
+}
+/* The bar floats OVER the list, so while it is up the scroller needs room to run
+   past it — otherwise the last card can never be scrolled clear of it. Set on
+   the panel (js toggles .with-back) so a panel without the bar keeps its normal
+   bottom padding. */
+.modal-panel.with-back .modal-body {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+
+.author-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* «Varios autores» & co: the note that says this page is a bucket of anthologies
+   and not a bibliography. Left-aligned — it is a sentence to read, not a status. */
+.author-collective-note {
+  padding: 6px 2px 0;
+  text-align: left;
+}
+
+/* 🔍 row above the author's category sections (only from AUTHOR_FILTER_MIN books
+   up). The input grows; the "N de M" hit count sits hard right and never wraps. */
+.author-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0 2px;
+}
+.author-filter-hits {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+/* «▾ mostrar N más»: the tail of a section built AUTHOR_SECTION_CAP rows at a
+   time. Full width, so it reads as the end of the list rather than as one more
+   control on the last card. */
+.author-more {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Category section header inside the author modal. */
+.author-cat {
+  margin: 10px 0 2px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent2);
+  text-transform: none;
+}
+/* A category header lays out like the saga head (title left, bulk-queue controls
+   hard right) — see the shared rule below; the pair sits as one group so
+   🔝 / ⬇️ read as one control. */
+.cat-queue-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+/* ---------- saga section (top of the author modal) ---------- */
+/* Header row: "📜 <saga> (N)" on the left, the enqueue-the-whole-saga button on
+   the right. Wraps on a narrow phone rather than squashing the button. */
+.saga-head,
+.cat-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.saga-title {
+  margin: 0;
+  flex: 1 1 auto;
+}
+/* The collapsed saga's title is the toggle — the caret shows open/closed state. */
+.saga-toggle {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.saga-caret {
+  display: inline-block;
+  width: 0.9em;
+  color: var(--muted);
+}
+.saga-queue {
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.saga-queue:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.saga-queue:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The saga's own rows drop the "📜 <saga>" line (the header says it) and gain a
+   leading position chip instead, so the reading order is a column you can scan.
+   Takes over the card's glyph slot (.ico), hence the matching specificity. */
+.bib-item .ico.saga-num {
+  flex: 0 0 auto;
+  min-width: 1.6em;
+  padding: 2px 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--accent2);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+/* Where you are in the saga: the book whose card opened this modal. */
+.saga-current {
+  outline: 2px solid var(--accent2);
+  outline-offset: -2px;
+}
+
+/* ---------- saga completeness (the chip + the holes it counts) ---------- */
+/* "✅ completa" / "⚠️ faltan 2", riding inside the saga title. */
+.saga-chip {
+  margin-left: 8px;
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  text-transform: none;
+}
+.saga-chip-full {
+  color: var(--accent2);
+}
+.saga-chip-miss {
+  color: var(--danger);
+}
+
+/* A missing book is a slot, not a card: dashed, muted, and NOT a <button> — there
+   is nothing to open. Right-click still reaches it (it wishes for the book). */
+.saga-miss {
+  border-style: dashed;
+  border-color: var(--danger);
+  opacity: 0.75;
+  cursor: context-menu;
+}
+.saga-miss .bib-title {
+  font-style: italic;
+}
+.bib-item .ico.saga-num-miss {
+  color: var(--danger);
+  border-style: dashed;
+  border-color: var(--danger);
+}
+/* Wished-for: the slot is still empty, but it is spoken for. */
+.saga-miss-wished {
+  border-color: var(--warn);
+  opacity: 1;
+}
+.saga-miss-wished .bib-author {
+  color: var(--warn);
+}
+
+/* ---------- en-curso modal (progress + queue) ---------- */
+
+/* Both shelves render .bib-row / .bib-item cards (buildBookCard), so the only
+   rules left here are the queue's own side controls. The list is the same
+   stacked column as the biblioteca's. */
+.enc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* The movers. They live in the block-move bar only (.enc-bulk below) — a cola row
+   carries no controls of its own at all, neither reorder nor remove. */
+.enc-move {
+  flex: 1;
+  min-width: 34px;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.enc-move:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ⏭️ Siguiente / ✅ Terminar. They carry TEXT, not a glyph, so they ride the
+   header's own size, and `margin-left:auto` on the first pushes the pair right. */
+.enc-hd-act {
+  height: 28px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.enc-hd-act:first-of-type {
+  margin-left: auto;
+}
+
+/* Cola multi-select. The ☑️ chip lives in the 🔜 En cola heading, beside the
+   count: it reuses .bib-chip, so "off" is the same greyed-out glyph as every
+   other toggle in the app and "on" is the same accent fill (aria-pressed). */
+.enc-multi {
+  margin-left: 6px;
+  height: 28px;
+  min-width: 32px;
+  vertical-align: middle;
+}
+
+/* A CHOSEN row. The tint sits on .bib-row, so it covers the card AND its ▲▼🗑 —
+   the whole row is what is selected. It must not fight the card's own status
+   cues (rating rings, favorite-author tint, ✔ terminado), so the mark is an
+   outline plus a wash rather than a background swap.
+
+   Literal rgba, like .st-reading's wash: the theme colours are hex custom
+   properties, so an alpha wash cannot be derived from one.
+
+   An early comment CLOSE once sat mid-paragraph here, and that is why the mode
+   shipped with an INVISIBLE selection (reported 2026-07-30): the prose after it
+   was parsed as part of this rule's selector, so the browser threw the whole rule
+   away — the row carried .enc-picked and had nothing to show for it. Guarded now
+   by tests/audiobooks-css-syntax.test.js, which is why this comment cannot spell
+   the delimiter out. */
+.bib-row.enc-picked {
+  outline: 2px solid #2962ff;
+  outline-offset: 1px;
+  border-radius: 10px;
+  background: rgba(41, 98, 255, 0.22);
+}
+
+/* The block-move bar over the cola. On screen while the MODE is on
+   (encurso.js#applyQueueBulk), so it never sits there as dead chrome. */
+.enc-bulk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 4px 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+.enc-bulk[hidden] {
+  display: none;
+}
+.enc-bulk-label {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.enc-bulk .enc-move {
+  min-width: 40px;
+  padding: 6px 0;
+  font-size: 0.95rem;
+}
+
+/* The bar's 🗑. The only irreversible control in the row of movers, so it is
+   tinted as one instead of hiding among them — the confirm is the real guard,
+   this is the warning before the tap. */
+.enc-bulk .enc-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* The cola's verdict line: only on screen when the last move did NOT land, so it
+   reads as an alert and not as chrome. Warn-coloured, above the list it is about. */
+.enc-note {
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--warn);
+  background: var(--input-bg);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+}
+.enc-note[hidden] {
+  display: none;
+}
+
+/* ✔ Terminados fold. `.enc-list` is display:flex, so an author rule beats the
+   UA's `[hidden] { display: none }` and the attribute alone would NOT hide the
+   list — it needs its own rule to win on specificity (the same trap .modal[hidden],
+   .bib-drawer[hidden] and .bib-letters[hidden] each carry their own rule for).
+   Without this the fold would ship permanently OPEN. */
+.enc-list[hidden] {
+  display: none;
+}
+
+/* The heading IS the toggle: full-width tap target, because the fold is opened
+   with a thumb. Chromeless — it must read as the h3 it sits in, not as a button. */
+.enc-fold {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.enc-fold:active {
+  transform: scale(0.99);
+}
+.enc-caret {
+  width: 1em;
+  color: var(--muted);
+}
+
+/* …chromeless everywhere EXCEPT ✔ Terminados, which is closed by default: a
+   heading that whispers hides the books behind it. So it is a bar — white card
+   over the panel, a 2px accent frame, bigger bold text — that cannot be scrolled
+   past. #id, because .enc-fold above zeroes background and border. */
+#encDoneSec h3 {
+  margin: 0;
+}
+#encDoneToggle {
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--txt);
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px var(--shadow);
+}
+#encDoneList:not([hidden]) {
+  margin-top: 8px;
+}
+
+/* The en-curso long-press popover reuses .bib-pop / .bib-pop-btn. It can carry
+   up to six controls (⭐👤👍👎🧹🗑), so let it wrap on a narrow phone instead of
+   overflowing the row. */
+.enc-pop {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 90vw;
+}
+
+/* 🧹 clear-progress: neutral (no signature card colour → keeps the default
+   border, grey fill from the shared rule above). 🗑 remove: red border to hint
+   the dislike/remove cue; these are actions, not toggles, so the fill stays grey
+   (never "active"). */
+.bib-pop-btn.trash {
+  border-color: #c0392b;
+}
+
+/* ---------- book-action menu (own modal) ---------- */
+/* The right-click / long-press menu is its own overlay (sits on the shared
+   .ui-modal/.ui-back backdrop from _ui.css — the full-screen layer is what
+   absorbs the dismiss click so it can't fall through to the card beneath).
+   Docked to the TOP: it opens near where the thumb already is on a phone (the old
+   bottom-dock made row 2 the hardest reach) and never jumps as its rows build.
+   The compound selector is deliberate: _ui.css is imported AFTER _modal.css, so a
+   bare `.book-menu-modal` would lose the align-items tie to `.ui-modal`
+   (flex-end at <560px, center above). `.ui-modal.book-menu-modal` outranks it at
+   BOTH widths, so top wins everywhere. */
+.ui-modal.book-menu-modal {
+  align-items: flex-start;
+  padding: 24px 16px 16px;
+}
+
+.book-menu-panel {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px var(--shadow);
+}
+
+.book-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.book-menu-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.book-menu-head-btns {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+.book-menu-help-btn,
+.book-menu-close-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.book-menu-help-btn[aria-pressed="true"] {
+  background: rgba(52, 152, 219, 0.28);
+  border-color: #3498db;
+}
+
+/* The action rows inside the panel: neutralise .bib-pop's absolute anchoring and
+   let each flow + wrap, centred, as a normal panel child. There are two — the
+   marks (⭐👤👍👎✅🧹) and the placement (🗑🔝⬇️) — and they are separate
+   elements, so the split holds at any width. Buttons keep their natural size
+   (min-width 40px, no flex-grow): a half-empty second row just leaves the gap. */
+.book-menu-panel .bib-pop {
+  position: static;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.book-menu-panel .bib-pop + .bib-pop {
+  margin-top: 8px;
+}
+
+/* ❓ legend: one row per shown control — big emoji + its description. It unfolds
+   UNDER the action rows (which stay on screen: the point of the key is to name
+   the emoji you are looking at), so it needs the rule + gap of a new section.
+   Collapsed by default — `hidden` alone would lose to `display: flex` here. */
+.book-menu-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.book-menu-legend[hidden] {
+  display: none;
+}
+.book-menu-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.book-menu-legend-emoji {
+  flex: 0 0 auto;
+  width: 34px;
+  text-align: center;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.book-menu-legend-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--txt);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- «Book and author» action header ---------- */
+/* The green promote-to-read zone at the TOP of the author modal: the book's own
+   card + ▶️ Abrir (open — select only; the player's ▶ Play still starts audio),
+   then the action rows (⭐👤👍👎✅🧹 · 📖🗑🔝⬇️) and the ❓ legend. The author's
+   OTHER books stream in below it, in the same scrollable modal body. Green marks
+   it as the one place a tap turns into an open book. */
+.book-and-author-head {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid rgba(46, 160, 67, 0.55);
+  border-radius: 14px;
+  background: rgba(46, 160, 67, 0.13);
+}
+/* The card sits alone on top — every control is in the two rows under it. */
+.baah-top .bib-row {
+  min-width: 0;
+}
+/* ▶️ Abrir leads row 2, tinted green so the one control that OPENS the book reads
+   apart from the marks and the queue controls beside it. */
+.book-and-author-head .bib-pop-btn.open {
+  color: #fff;
+  background: #2ea043;
+  border-color: #2ea043;
+}
+.book-and-author-head .bib-pop-btn.open:hover {
+  background: #2c974b;
+  border-color: #2c974b;
+}
+/* Same neutralising the popover rows got: kill .bib-pop's absolute anchoring and
+   let each row flow + wrap, centred, under the top row. */
+.book-and-author-head .bib-pop {
+  position: static;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: none;
+  margin-top: 10px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+/* ❓ rides the end of row 2 as a normal row item, sized like the buttons it sits
+   beside — not a block with a line of its own. */
+.book-and-author-head .book-menu-help-btn {
+  min-width: 40px;
+  height: auto;
+  align-self: stretch;
+}
+
+/* ---------- seek + speed fine-adjust modals ---------- */
+
+/* The real slider inside a modal: full width, no flex parent to stretch it. */
+.modal-range {
+  display: block;
+  width: 100%;
+  margin: 4px 0 2px;
+}
+
+/* ⏮/⏭ paragraph steps in the 📍 Posición modal. Unlike everything else there
+   they commit on press, so they sit apart from the slider + ±% cluster. */
+.para-step {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.para-step button {
+  min-width: 0;
+  padding: 12px 4px;
+  font-size: 0.95rem;
+}
+
+/* ±1/5/10/15/20 fine-step buttons: two rows of five, evenly sized. */
+.delta-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.delta-grid button {
+  min-width: 0;
+  padding: 10px 4px;
+  font-size: 0.9rem;
+}
+
+/* Cancel / commit row at the foot of the modal body. */
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ---------- 🌠 wishlist modal ---------- */
+/* Books the library does NOT have, so a row is not a load target: the card is a
+   plain span (no cursor, no hover) and the only control is ✕ "forget this wish".
+   A wish leaves the list on its own the moment the book lands in the catalog —
+   see js/wishlist.js — so there is deliberately no "I got it" button. */
+.wish-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.wish-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.wish-item {
+  cursor: default;
+}
+
+.wish-del {
+  flex: 0 0 auto;
+  width: 38px;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--txt);
+  cursor: pointer;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.wish-empty {
+  margin: 12px 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ===================== 📈 Registro de progreso =====================
+   A fixed four-column grid — night · +avanzado · −rebobinado · neto — so the
+   numbers line up down the card and a night with nothing in it is visible as a
+   gap rather than as missing data. The "sin lectura" row spans the three number
+   columns because saying it once reads as an answer; three dashes read as a
+   failure to load. */
+.plog-book {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.plog-book-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.plog-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plog-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--border);
+}
+
+.plog-day {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plog-fwd {
+  color: var(--accent2);
+  font-weight: 600;
+}
+
+.plog-back {
+  min-width: 4.5em;
+  color: var(--warn);
+  text-align: right;
+}
+
+.plog-net {
+  min-width: 4.5em;
+  font-weight: 600;
+  text-align: right;
+}
+
+.plog-row-empty .plog-day {
+  opacity: 0.75;
+}
+
+.plog-none {
+  grid-column: 2 / -1;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* A book that had no listening across the shown window: said once, per book,
+   instead of a column of "sin lectura" rows — those nights are simply dropped now
+   (the log is a sleep-mode sanity check, and empty nights are noise there). */
+.plog-none-book {
+  padding: 4px 0 2px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* The 🌙/☀️ shelf toggle row above the inline log. */
+.plog-bar {
+  display: flex;
+  margin: 2px 0 10px;
+}
+
+/* Accumulated-total headline at the top of the inline log — "Total escuchado
+   12,5 h". Set apart from the book cards below by a rule, weightier than a night
+   row so it reads as the sum, not another entry. */
+.plog-grand {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.plog-grand-lbl {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.plog-grand-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The window total: same grid, set apart by weight rather than by a rule, so it
+   reads as the sum of the rows above and not as another night. */
+.plog-total {
+  margin-top: 2px;
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+}
+
+.plog-total .plog-day {
+  color: var(--txt);
+}

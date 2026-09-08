@@ -1,0 +1,11 @@
+/*
+ * Lector PDF — main stylesheet.
+ * Imports the partials in cascade order.
+ */
+
+@import url("_variables.css");
+@import url("_base.css");
+@import url("_controls.css");
+@import url("_player.css");
+@import url("_modal.css");
+@import url("_ui.css");

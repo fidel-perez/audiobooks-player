@@ -1,0 +1,19 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lector de PDF en voz alta">
+  <!-- page -->
+  <rect x="6" y="7" width="32" height="50" rx="5" fill="#3b82f6"/>
+  <!-- folded top-right corner -->
+  <path d="M30 7 h3 a5 5 0 0 1 5 5 v3 z" fill="#1e40af"/>
+  <!-- text lines -->
+  <g stroke="#dbeafe" stroke-width="3" stroke-linecap="round">
+    <line x1="12" y1="21" x2="30" y2="21"/>
+    <line x1="12" y1="29" x2="32" y2="29"/>
+    <line x1="12" y1="37" x2="26" y2="37"/>
+    <line x1="12" y1="45" x2="29" y2="45"/>
+  </g>
+  <!-- sound emitter + waves -->
+  <circle cx="41" cy="32" r="4" fill="#22c55e"/>
+  <g fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round">
+    <path d="M46 25 a11 11 0 0 1 0 14"/>
+    <path d="M52 20 a18 18 0 0 1 0 24"/>
+  </g>
+</svg>

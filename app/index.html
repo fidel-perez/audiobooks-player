@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Audiolibros</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <!-- PWA: install to the home screen from the HTTPS :10000 face so the icon
+         always reopens the one storage-durable, offline-capable origin (an
+         installed PWA also gets persistent storage, resisting eviction). -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- No import map. The vendored Piper library used to import onnxruntime-web
+         by bare specifier, which a map resolved here — but synthesis now runs in
+         a Worker (js/piper-worker.js), and import maps do not apply inside one.
+         The library imports it by URL instead (ORT_URL in vendor/piper-tts-web.js),
+         which resolves the same on both threads. Do not reintroduce a map for it:
+         it would work on the page and fail silently in the worker, which is the
+         half-broken state this replaced. onnxruntime and the espeak WASM are
+         cached at runtime by the service worker on first use, which is what makes
+         the voice work offline afterwards. -->
+    <link rel="stylesheet" href="_shared/ui/no-select.css">
+    <link rel="stylesheet" href="_shared/ui/modal-top.css">
+  </head>
+
+  <body>
+    <!-- Compact top bar: brand glyph on the left, actions on the right. The old
+         title + long version blurb were dropped to save vertical space; all
+         config now lives behind the ⚙️ settings modal. -->
+    <header class="topbar">
+      <!-- What tonight will do without opening ⚙️: the armed sleep preset, the
+           speed in force and the shelf newly-opened books join. In the top bar
+           rather than a row of their own — the row cost the player a line of
+           glass. The 🔈 volume chip is gone: the level is chosen once and then
+           never read, so it spent a chip saying nothing that changes. -->
+      <div class="main-chips">
+        <span id="chipSleep" class="stat-chip"
+          title="Preajuste de esta noche — mantén pulsado para cambiar entre 🌙 Normal y ⏱️ Corto"></span>
+        <span id="chipRate" class="stat-chip"
+          title="Velocidad — mantén pulsado para cambiar entre 180% y 150%"></span>
+        <span id="chipShelf" class="stat-chip"
+          title="Estantería en curso — mantén pulsado para cambiar entre 🌙 Noche y ☀️ Día"></span>
+      </div>
+      <span class="grow"></span>
+      <!-- The 📖 top-bar "En curso" button is gone: the active-book card (and the
+           no-book placeholder) on the main page open that modal directly, so the
+           top-bar duplicate was redundant. -->
+      <!-- The 😴 top-bar button is gone: sleep mode is a SETTING now (⚙️ → 😴),
+           on by default and remembered on this device, not a per-night session
+           you arm. There is nothing left for a button to toggle — the watchdog
+           only ever acts on a phone that is playing and has been still. -->
+      <!-- The old 🌅 "push state" button is gone: progress now auto-syncs when the
+           screen comes back on (see #syncBanner + js/progress.js), and the 15-min
+           rewind happens automatically when sleep mode stops playback. -->
+      <!-- The old ➕ add-files control (and its hidden file input) is gone: local
+           uploads will be redone as a raspi-library upload, so books always carry
+           a catalog src. The top-bar 🎲 is gone too — the biblioteca modal's 🎲
+           spotlight is the one random-book control. -->
+      <!-- Biblioteca sits immediately before the ⚙️ gear (operator layout
+           preference), and is here from the FIRST frame. It used to ship
+           `hidden` and unhide once the Pi library endpoint answered — which put
+           an IndexedDB read, the synchronous chunking of every stored book, a
+           second IndexedDB read and a network round-trip in front of it, so the
+           📚 appeared several seconds into the load and the top bar visibly
+           gained a button under the reader's eyes. Controls must not
+           materialise late. Pressing it before the library has answered opens
+           the modal on its loading state and fills in when the data lands (see
+           openBiblioteca): the wait moves to the person who asked for it. -->
+      <button id="bibliotecaBtn" class="icon-btn" type="button"
+        title="Biblioteca del servidor">📚</button>
+      <button id="settingsBtn" class="icon-btn" type="button" title="Ajustes">⚙️</button>
+    </header>
+
+    <!-- Source card: status + resume note. Books come from the 📚 biblioteca (the
+         local add-files picker was removed, to be redone as a library upload). -->
+    <div class="card src">
+      <!-- Active-book card: a biblioteca-style card for the open book (title +
+           author). Replaces the raw #status/#resumeNote lines while a book is
+           loaded — right-click valorates it (same popover as the library),
+           tapping it lists the author's other books. Shown only when a doc is
+           active; #status/#resumeNote reappear when nothing is loaded. -->
+      <div id="bookCard" class="book-card" hidden></div>
+      <div id="status"></div>
+      <div id="resumeNote"></div>
+    </div>
+
+    <div class="card" id="controls" hidden>
+      <div id="chapWrap" class="hidden">
+        <select id="chapter" aria-label="Capítulo"></select>
+      </div>
+
+      <!-- Tap the bar to open the seek modal (manual slider + ±% fine steps). -->
+      <div class="bar" id="seekBar" role="button" tabindex="0"
+        title="Tocar para ajustar la posición"><i id="progBar"></i></div>
+      <div class="meta">
+        <span class="pct"><span id="pctNow">0</span>%</span>
+        <span id="pageInfo"></span>
+      </div>
+      <div class="meta tiny">
+        <span id="timeInfo">⏱ 00:00:00 / 00:00:00</span>
+        <span id="timeNote">(estimado)</span>
+      </div>
+
+      <!-- ⏮/⏭ moved INTO the 📍 Posición modal: a mistap on the player used to
+           lose the paragraph you were on. ▶ Play is the only transport left. -->
+      <div class="transport">
+        <button class="go big" id="playpause">▶ Play</button>
+      </div>
+
+      <!-- The on-screen speed readout/shortcut was removed from the player view;
+           speed lives in the ⚙️ settings modal (⚡ Velocidad). -->
+
+      <div id="now"><small>El texto leído aparecerá aquí…</small></div>
+    </div>
+
+    <!-- Toast: the status line you can actually SEE. While a book is loaded the
+         active-book card covers #status/#resumeNote, so everything setStatus wrote
+         while reading — the end-of-book auto-advance's "ahora suena esto", a failed
+         download, "⏳ Generando voz…", the sleep notices — went into a hidden div.
+         Lives BELOW the #controls card (bottom of the main screen) on purpose: when
+         it used to sit above the transport, appearing/disappearing pushed the ▶
+         Play button up and down under the reader's thumb and caused mistaps. Down
+         here it can't move the button. It stays visible, clears itself, and is the
+         ONE place a message may carry a control (the auto-advance ↩, a navigation
+         affordance — never a destructive one). js/dom.js owns it and always
+         rewrites its contents. -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- Sync banner: shown by js/progress.js whenever there is unsynced reading
+         progress that can't reach the server (e.g. offline overnight), so you know
+         what to turn back on — Internet if the device is offline, Tailscale if it's
+         online but off the tailnet (syncBannerText). It retries automatically until a
+         push confirms, then hides itself — this replaced the old 🌅 manual "push
+         state" button. The text below is a placeholder: showSyncBanner always
+         rewrites it before unhiding.
+
+         It lives at the BOTTOM of the main screen, after the toast, for the same
+         reason the toast does: it appears and disappears on its own schedule, and
+         up between the header and the book card it shoved the WHOLE player —
+         card, seek bar and ▶ Play — down the screen every time the tunnel
+         flapped, moving controls under the reader's thumb. Down here the only
+         thing its size can push is the empty space below it. Being last in flow
+         costs nothing: it is loud (warn colour) and the main screen is short. -->
+    <div id="syncBanner" class="sync-banner" role="status" title="Toca para reintentar la sincronización ahora" hidden>
+      🔄 Guardando progreso…
+    </div>
+
+    <!-- ===================== En-curso modal (progress + queue) ===================== -->
+    <div class="modal" id="progressModal" hidden>
+      <div class="modal-back" data-close></div>
+      <!-- modal-full: both lists paint asynchronously (catalog + synced progress),
+           so a content-hugging sheet opened half-height and then grew upward as
+           the rows landed. Full height from the first paint; the body scrolls. -->
+      <div class="modal-panel modal-full" role="dialog" aria-label="En curso">
+        <div class="modal-head">
+          <h2>📖 En curso</h2>
+          <!-- Day/night shelf toggle: each shelf keeps its OWN libros abiertos +
+               en cola (see js/mode.js). Default night 🌙; tap to switch to day ☀️.
+               The 📖 top-bar button is tinted blue/yellow to match. -->
+          <button id="modeToggle" class="mode-toggle" type="button"
+            title="Cambiar de estantería: noche 🌙 / día ☀️ (cada una tiene sus propios libros)">🌙 Noche</button>
+          <span class="grow"></span>
+          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <!-- Libro en progreso: the ONE book that is currently active (the book on
+               the main #bookCard). It rides above "Libros abiertos" and is pulled
+               OUT of it, so the top of the shelf is always "what I'm reading now".
+               Shelf-filtered like everything else: it shows the open book only
+               while you are viewing ITS estantería, and the día/noche toggle moves
+               no book — so this section is empty on the other shelf, and that is
+               correct. Tapping the active card opens THIS modal, so this section
+               is where that tap lands. -->
+          <section id="encProgressSec" hidden>
+            <!-- ⏭️ y ✅ mandan el libro activo a ✔ Terminados recientemente; ⏭️
+                 además sube el primero de la cola en su sitio, y con la cola
+                 vacía no hace nada (no marca nada). Sin libro abierto la sección
+                 sigue aquí: ⏭️ empieza la cola y ✅ se apaga. Van en el
+                 encabezado y no en la ficha: la ficha es la misma tarjeta en toda
+                 la app y estos dos sólo existen aquí. Ambos preguntan antes,
+                 nombrando adónde va el libro y cuál empieza. -->
+            <h3>▶️ Libro en progreso
+              <button id="encNextBtn" class="bib-chip bib-act enc-hd-act" type="button"
+                title="Marcarlo leído (✔ Terminados recientemente) y empezar el primero de la cola — con la cola vacía no hace nada">⏭️ Siguiente</button>
+              <button id="encFinishBtn" class="bib-chip bib-act enc-hd-act" type="button"
+                title="Marcarlo leído (✔ Terminados recientemente) y dejar el reproductor vacío">✅ Terminar</button>
+            </h3>
+            <div id="encProgressList" class="enc-list"></div>
+          </section>
+          <!-- El chip cuenta los libros abiertos, igual que en ✔ Terminados y
+               🔜 En cola. Se oculta cuando no hay ninguno: el texto de la lista
+               vacía ya lo dice, y un «0» ahí sólo repite la mala noticia. -->
+          <section>
+            <h3>🎧 Libros abiertos <span id="encOpenCount" class="badge" hidden>0</span></h3>
+            <div id="encList" class="enc-list"></div>
+          </section>
+          <!-- ✔ Terminados recientemente: bandeja de entrada de lo que acabas de
+               cerrar. Plegado por defecto; el chip los cuenta. Cada libro se queda
+               aquí hasta que lo quitas a mano (📤 «Quitar de recientes»): eso lo
+               saca de esta vista SIN dejar de estar leído — pasa a vivir en el
+               filtro 📖 Leídos de la biblioteca. La sección entera se oculta cuando
+               no hay ninguno pendiente. El encabezado ES el botón, para que el
+               objetivo táctil ocupe toda la fila. -->
+          <section id="encDoneSec" hidden>
+            <h3>
+              <button id="encDoneToggle" class="enc-fold" type="button"
+                aria-expanded="false" aria-controls="encDoneList"
+                title="Terminados recientemente — toca para desplegar">
+                <span id="encDoneCaret" class="enc-caret" aria-hidden="true">▸</span>
+                <span>✔ Terminados recientemente</span>
+                <span id="encDoneCount" class="badge">0</span>
+              </button>
+            </h3>
+            <div id="encDoneList" class="enc-list" hidden></div>
+          </section>
+          <section>
+            <!-- El chip ☑️ enciende la MULTISELECCIÓN: con él pulsado, tocar un
+                 libro de la cola lo elige (la fila se resalta) en vez de abrir su
+                 ficha. El clic derecho / pulsación larga SOBRE UN LIBRO enciende
+                 y apaga el mismo modo (y elige ese libro): en esta lista lo que
+                 se busca al mantener pulsada una fila es MOVERLA, y la ficha
+                 queda a un toque normal. Es un modo y no un ☐ por fila porque la
+                 fila ya es una ficha entera: una casilla permanente en cada una
+                 añadía un control fijo para algo que se hace de vez en cuando.
+                 Reordenar vive SÓLO aquí: las filas ya no llevan ▲▼. -->
+            <h3>🔜 En cola <span id="encQueueCount" class="badge" hidden>0</span>
+              <button id="queueMultiChip" class="bib-chip enc-multi" type="button"
+                aria-pressed="false"
+                title="Multiselección: elegir varios libros y moverlos juntos (o clic derecho en un libro)">☑️</button>
+            </h3>
+            <!-- Barra de bloque: acompaña al MODO (no a la selección), así que
+                 aparece al encenderlo y dice qué hacer. Mueve todos los elegidos
+                 a la vez — un puesto (▲▼) o hasta el extremo de la cola (🔝⤓),
+                 conservando su orden relativo. Los botones se desactivan mientras
+                 no haya nada elegido; ✕ sale del modo. -->
+            <div id="queueBulkBar" class="enc-bulk" hidden>
+              <span id="queueBulkCount" class="badge">0</span>
+              <span class="enc-bulk-label">elegidos · tócalos en la lista</span>
+              <span class="grow"></span>
+              <button id="queueBulkTop" class="enc-move" type="button"
+                title="Subir la selección al principio de la cola">🔝</button>
+              <button id="queueBulkUp" class="enc-move" type="button"
+                title="Subir la selección un puesto">▲</button>
+              <button id="queueBulkDown" class="enc-move" type="button"
+                title="Bajar la selección un puesto">▼</button>
+              <button id="queueBulkBottom" class="enc-move" type="button"
+                title="Bajar la selección al final de la cola">⤓</button>
+              <!-- 🗑 quita de la cola TODO lo elegido. Es la única forma de
+                   quitar libros de la cola: las filas ya no llevan su propio 🗑,
+                   igual que ya no llevan ▲▼. Siempre pregunta (nombrando el libro
+                   o cuántos son): es lo único aquí que no se deshace tocando otra
+                   vez. -->
+              <button id="queueBulkDel" class="enc-move enc-danger" type="button"
+                title="Quitar de la cola los libros elegidos">🗑</button>
+              <button id="queueBulkClear" class="enc-move" type="button"
+                title="Salir de la multiselección">✕</button>
+            </div>
+            <!-- Veredicto de la última escritura de la cola. Un movimiento que no
+                 llega al servidor dejaba la lista igual y en silencio, que es
+                 indistinguible de "la app ignora mis toques". El aviso va AQUÍ y
+                 no en el toast porque el toast vive bajo la tarjeta del reproductor
+                 y cualquier modal lo tapa. -->
+            <div id="queueNote" class="enc-note" role="status" hidden></div>
+            <div id="queueList" class="enc-list"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== Settings modal ===================== -->
+    <div class="modal" id="settingsModal" hidden>
+      <div class="modal-back" data-close></div>
+      <div class="modal-panel" role="dialog" aria-label="Ajustes">
+        <div class="modal-head">
+          <div class="head-titles">
+            <h2>⚙️ Ajustes</h2>
+            <!-- When the running code was last changed, so a stale cache is
+                 obvious (js/main.js renderBuildInfo). Tap to force-refresh. -->
+            <button id="buildInfo" class="build-info" type="button"
+              title="Actualización de la app · toca para forzar la recarga">Comprobando versión…</button>
+          </div>
+          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Cada sección es un <details class="fold"> plegable: la fila del
+               título ES el botón (summary), con una insignia que dice el valor
+               actual para que un pliegue cerrado siga siendo legible. TODAS
+               arrancan cerradas. El texto explicativo vive en .prose y sólo
+               aparece al pulsar el ℹ️ del fondo. -->
+          <section>
+            <details id="voiceDetails" class="fold">
+              <summary><h3>🔊 Voz <span id="voiceSummary" class="badge"></span></h3></summary>
+
+              <div class="row">
+                <div>
+                  <label for="voice">Voz</label>
+                  <select id="voice">
+                    <option value="device">Voz del móvil (Android)</option>
+                  </select>
+                </div>
+              </div>
+              <div id="voiceStatus" class="hint"></div>
+
+              <div class="row">
+                <div>
+                  <label for="lang">Idioma</label>
+                  <select id="lang">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Instrucciones de Android: sólo importan con la voz del móvil,
+                   así que van en su propio plegable en vez de ocupar la sección
+                   entera para quien ya usa una voz descargada. -->
+              <details id="deviceVoiceHelp">
+                <summary class="hint">Cómo cambiar la voz del móvil</summary>
+                <div class="hint">
+                  La voz del móvil la elige Android, no esta app. Se configura una
+                  sola vez, en los ajustes del móvil:
+                  <ol class="steps">
+                    <li>Ajustes → Accesibilidad → Salida de texto a voz.
+                      <br>(o bien Ajustes → Sistema → Idiomas → Salida de texto a voz)</li>
+                    <li>Motor preferido: <b>Speech recognition &amp; synthesis from
+                      Google</b> (o «Servicios de voz de Google»).</li>
+                    <li>Descargar idiomas → <b>Español</b>.</li>
+                    <li>Salida de texto a voz → <b>Español</b>.</li>
+                  </ol>
+                  Eso es todo: al volver aquí, la app usará esa voz.
+                </div>
+                <div id="voiceNote" class="hint"></div>
+              </details>
+            </details>
+          </section>
+
+          <section>
+            <details class="fold">
+              <summary><h3>🔈 Volumen <span id="volVal" class="badge">100%</span></h3></summary>
+              <div class="range-wrap">
+                <button class="sec sm" id="volDown" title="Bajar 5%">🔉</button>
+                <input type="range" id="vol" min="0" max="4" step="0.05" value="1">
+                <button class="sec sm" id="volUp" title="Subir 5%">🔊</button>
+              </div>
+              <div class="hint prose" id="volHint"></div>
+            </details>
+          </section>
+
+          <!-- Modulación: qué hace la app con los picos antes de que lleguen al
+               altavoz. Sólo afecta a las voces descargadas (Piper): la voz del
+               móvil la pinta Android fuera de la página. -->
+          <section>
+            <details class="fold">
+              <summary><h3>🎚️ Modulación <span id="modulationVal" class="badge"></span></h3></summary>
+              <div class="row">
+                <div>
+                  <label for="modulation">Tratamiento de picos</label>
+                  <select id="modulation">
+                    <option value="limite">Límite suave (recomendado)</option>
+                    <option value="rapido">Rápido (comprime y suelta ya)</option>
+                    <option value="nivelado">Nivelado (volumen constante)</option>
+                    <option value="clasica">Clásica (la de antes)</option>
+                    <option value="cruda">Sin tratar</option>
+                  </select>
+                </div>
+              </div>
+              <div class="hint prose">En un pico fuerte el altavoz del móvil se
+                protege y calla ~200 ms. «Límite suave» recorta el pico en la
+                página, así que no llega a saltar. «Nivelado» además sube los
+                pasajes flojos para que todo suene igual de alto. «Clásica» es lo
+                que había: comprime mucho y tarda un cuarto de segundo en volver,
+                que es justo el bache que se oye. Cámbialo en marcha y compara.
+                Sólo vale para las voces descargadas: la voz del móvil la pinta
+                Android fuera de la página y no se puede tocar desde aquí.</div>
+            </details>
+          </section>
+
+          <!-- Velocidad: the reading speed lives here in ⚙️ (was a separate modal).
+               Global + persisted (LS_RATE), not per-book. The slider + ±% steps
+               change speed LIVE and persist as they happen.
+
+               Y ES DEL PREAJUSTE ARMADO (2026-08-06): con «⏱️ Corto» puesto, este
+               slider muestra y edita la velocidad de ESA carrera — se recupera la
+               global al gastarse. Lo dice #rateScope, que escribe
+               js/main.js#paintSettingsChips. -->
+          <section>
+            <details class="fold">
+              <summary><h3>⚡ Velocidad <span id="rateModalVal" class="badge">200%</span></h3></summary>
+              <p id="rateScope" class="preset-scope"></p>
+              <input type="range" id="rate" class="modal-range" min="0.8" max="3"
+                step="0.05" value="2" aria-label="Velocidad">
+              <div class="delta-grid" id="rateDeltas" aria-label="Ajuste fino">
+                <button type="button" class="sec" data-d="-20">−20</button>
+                <button type="button" class="sec" data-d="-15">−15</button>
+                <button type="button" class="sec" data-d="-10">−10</button>
+                <button type="button" class="sec" data-d="-5">−5</button>
+                <button type="button" class="sec" data-d="-1">−1</button>
+                <button type="button" class="sec" data-d="1">+1</button>
+                <button type="button" class="sec" data-d="5">+5</button>
+                <button type="button" class="sec" data-d="10">+10</button>
+                <button type="button" class="sec" data-d="15">+15</button>
+                <button type="button" class="sec" data-d="20">+20</button>
+              </div>
+              <div class="hint prose">Global y persistente (no por libro). También se
+                ajusta desde el ⚡ de la pantalla, que ahora abre estos ajustes.
+                Con «⏱️ Corto» armado se guarda en ese preajuste: vale para esa
+                carrera y luego vuelve sola la velocidad de siempre.</div>
+            </details>
+          </section>
+
+          <!-- La insignia #sleepSummary muestra la configuración actual
+               («40 min · ↺15») para que el pliegue cerrado la diga. -->
+          <section>
+            <details class="fold">
+              <summary><h3>😴 Modo dormir <span id="sleepSummary" class="badge"></span></h3>
+                <!-- El preajuste de la noche, en la cabecera para poder cambiarlo
+                     sin desplegar nada: «normal» es 40 · ↺15 de fábrica, «corto»
+                     30 · ↺8, y el corto vale UNA sola vez — al detenerse la lectura
+                     vuelve solo al normal. Es para despertarse de madrugada y
+                     querer un rato corto, que es justamente lo que la noche
+                     siguiente NO quiere.
+                     LOS DOS DESPLEGABLES DE ABAJO SON DEL PREAJUSTE PUESTO: al
+                     pulsar «corto» pasan a mostrar —y a editar— sus 30 · ↺8, así
+                     que se ve lo que va a hacer esta noche y se puede ajustar ahí
+                     mismo. Antes enseñaban siempre los del normal y los del corto
+                     no se podían tocar desde ninguna pantalla. -->
+                <button type="button" id="sleepPreset" class="preset-toggle"
+                  aria-pressed="false"
+                  title="Preajuste de esta noche: normal o corto (una sola vez). Los desplegables de abajo configuran el que esté puesto">🌙 Normal</button>
+              </summary>
+              <!-- El interruptor que antes era el botón 😴 de la barra superior.
+                   Activado por defecto y se recuerda EN ESTE dispositivo (no se
+                   sincroniza): querer el vigilante es cosa del móvil con el que
+                   se duerme, no de la cuenta. -->
+              <label for="sleepOn">Modo dormir</label>
+              <select id="sleepOn" aria-label="Activar el modo dormir">
+                <option value="1" selected>Activado</option>
+                <option value="0">Desactivado</option>
+              </select>
+              <!-- Qué preajuste están configurando estos dos desplegables. Lo
+                   escribe js/main.js#paintSettingsChips y NO es .prose: con el
+                   corto puesto los números de abajo son otros, y eso no puede
+                   quedar detrás del botón ℹ️ — sin esta línea el panel parece
+                   haber cambiado sus ajustes de siempre él solo. -->
+              <p id="sleepPresetScope" class="preset-scope"></p>
+              <label for="sleepMin">Minutos sin movimiento antes de detener</label>
+              <!-- Una sola lista para los dos preajustes, de 5 a 60: el corto pide
+                   valores que al normal no se le ocurrirían (5/10/15) y duplicar la
+                   lista por preajuste sería una segunda lista que se queda atrás.
+                   Lo que cambia al pulsar el chip es QUÉ VALOR guardado se muestra,
+                   no las opciones. -->
+              <select id="sleepMin" aria-label="Minutos sin movimiento antes de detener">
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
+                <option value="25">25 min</option>
+                <option value="30">30 min</option>
+                <option value="35">35 min</option>
+                <option value="40" selected>40 min</option>
+                <option value="45">45 min</option>
+                <option value="50">50 min</option>
+                <option value="55">55 min</option>
+                <option value="60">60 min</option>
+              </select>
+              <!-- Lo escribe js/sleep.js#sleepModeNote al abrir los ajustes: el
+                   comportamiento con la pantalla apagada NO es el mismo en la app
+                   del móvil (sensor nativo) que en una pestaña del navegador
+                   (temporizador a secas), y no es un detalle que se pueda dejar a
+                   descubrir a las 3 de la mañana. -->
+              <div class="hint prose" id="sleepModeNote"></div>
+              <!-- Instrumento de prueba, NO una función de la noche: pita cada
+                   vez que el sensor cuenta un movimiento, para poder comprobar
+                   con la pantalla apagada que agitar el móvil se nota — sin
+                   esperar los 40 min del aviso. Desactivado por defecto, local
+                   como #sleepOn, y se ve en la insignia del pliegue para que uno
+                   olvidado encendido cante. -->
+              <label for="sleepBeep">Pitar al mover (prueba)</label>
+              <select id="sleepBeep" aria-label="Pitar cada vez que se detecta movimiento">
+                <option value="0" selected>Desactivado</option>
+                <option value="1">Activado</option>
+              </select>
+              <div class="hint prose">Con el modo dormir activado, pita una vez cada
+                vez que el móvil detecta que lo mueves. Sirve para comprobar en cinco
+                segundos —y con la pantalla apagada— que el sensor te siente, en lugar
+                de esperar a que salte el aviso. Acuérdate de desactivarlo después.</div>
+              <label for="rewindMin">Rebobinar al detenerse</label>
+              <!-- 2/4/6/8 existen por el preajuste corto: en un rato de 30 min un
+                   −15 retrocede sobre la mitad de lo que sonó, así que su retroceso
+                   de fábrica es 8 y hay que poder afinarlo por debajo de 5. -->
+              <select id="rewindMin" aria-label="Minutos a rebobinar al detenerse">
+                <option value="0">No rebobinar</option>
+                <option value="2">2 min</option>
+                <option value="4">4 min</option>
+                <option value="5">5 min</option>
+                <option value="6">6 min</option>
+                <option value="8">8 min</option>
+                <option value="10">10 min</option>
+                <option value="15" selected>15 min</option>
+                <option value="20">20 min</option>
+                <option value="25">25 min</option>
+                <option value="30">30 min</option>
+              </select>
+              <div class="hint prose">Al dormirte y detenerse la lectura, retrocede este
+                tiempo para retomar antes de donde te quedaste. Solo aplica al parar
+                el modo dormir. Se recuerda entre dispositivos.</div>
+            </details>
+          </section>
+
+          <!-- Registro de progreso: cuánto se avanzó cada noche. El contenido
+               (toggle 🌙/☀️ + total + rejilla por noche) se pinta EN LÍNEA al
+               desplegar — antes vivía en su propio modal tras un botón. La insignia
+               #progressSummary repite el total de horas acumuladas para el pliegue
+               cerrado; #progressLogBody lo pinta js/logview.js al abrir el fold. -->
+          <section>
+            <details class="fold" id="progressDetails">
+              <summary><h3>📈 Registro de progreso <span id="progressSummary" class="badge"></span></h3></summary>
+              <div class="plog-bar">
+                <button id="logModeToggle" class="mode-toggle" type="button"
+                  title="Ver el registro de la estantería de noche 🌙 o de día ☀️">🌙 Noche</button>
+              </div>
+              <div id="progressLogBody"></div>
+              <div class="hint prose">Minutos avanzados y rebobinados cada noche, para
+                los dos últimos libros. Sirve para comprobar por la mañana si la
+                sesión de anoche funcionó.</div>
+            </details>
+          </section>
+
+          <!-- The 🧪 Experimental read modes (frases cortas + pausas suaves) are
+               now baked in permanently (see js/pdf.js and js/cleanForSpeech.js),
+               so their toggles were removed from here. -->
+
+          <!-- Prose reveal: todo el texto explicativo (.prose) está oculto para que
+               los ajustes queden limpios; este ℹ️ lo muestra/oculta de golpe. -->
+          <div class="prose-toggle-wrap">
+            <button id="proseToggle" class="prose-toggle" type="button"
+              aria-pressed="false" title="Mostrar u ocultar las explicaciones">ℹ️</button>
+          </div>
+
+          <section class="fine prose">
+            <div>📱 En Android la pantalla se mantiene encendida mientras se lee y
+              se apaga sola al parar. La voz del dispositivo la reproduce el
+              sistema fuera de la página: si sales de la app o apagas la pantalla,
+              Android detiene la lectura, y al volver continúa donde estaba.</div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- The 📈 progress log used to be its own modal opened from ⚙️ Ajustes; it now
+         renders INLINE inside the 📈 Registro fold (see #progressDetails above and
+         js/logview.js), so there is no separate modal here anymore. -->
+
+    <!-- ===================== Server-library browser modal ===================== -->
+    <div class="modal" id="bibModal" hidden>
+      <div class="modal-back" data-close></div>
+      <div class="modal-panel modal-full" role="dialog" aria-label="Biblioteca del servidor">
+        <!-- Head is the ACTION bar (no title, to stay compact): 🎛️ opens the
+             filter drawer below, then 🔤 sort / 🔍 search / 🎲 random. The six
+             narrowing chips + gender + category live in #bibDrawer so the head
+             never wraps. Both are shown only when the catalog.json index is
+             served (see biblioteca.js); folder-fallback mode leaves them
+             hidden. The 🎛️ badge NAMES the active filters (🎛️ ♂ ⭐), so a
+             narrowed view is legible — and legible about WHICH filter narrowed
+             it — with the drawer shut. -->
+        <div class="modal-head bib-head">
+          <div id="bibFilters" class="bib-filter-row" hidden>
+            <button id="bibFiltersBtn" class="bib-chip bib-act bib-drawer-btn" type="button"
+                    title="Filtros" aria-expanded="false" aria-controls="bibDrawer">🎛️<span
+                    id="bibFiltersOn" class="bib-badge" hidden aria-hidden="true"></span></button>
+            <!-- Cycles: 🔤 alfabético → 🆕 escrito (nuevo) → 🏺 escrito (viejo)
+                 → 📥 añadido. Label/emoji are painted by applySortUI. -->
+            <button id="bibSort" class="bib-chip bib-act" type="button">🔤</button>
+            <button id="bibSearchBtn" class="bib-chip bib-act" type="button"
+                    title="Buscar por título o autor 🔍" aria-pressed="false">🔍</button>
+            <input id="bibSearch" class="bib-search" type="search" hidden
+                   placeholder="Buscar título o autor…" autocomplete="off"
+                   aria-label="Buscar por título o autor" />
+            <button id="bibRandom" class="bib-chip bib-act" type="button"
+                    title="Destacar un libro al azar de estos filtros (tócalo para reproducir)">🎲</button>
+            <!-- 🌠 books wanted but NOT in the library; 📋 the whole taste
+                 profile (⭐/👍/👎/👤 + 🌠) as Markdown on the clipboard, to paste
+                 into an LLM. See js/wishlist.js + js/profile.js. -->
+            <button id="bibWish" class="bib-chip bib-act" type="button"
+                    title="Lista de deseos 🌠 (libros que no están en la biblioteca)">🌠</button>
+            <button id="bibCopy" class="bib-chip bib-act" type="button"
+                    title="Copiar mi perfil de gustos al portapapeles 📋 (para pegar en un LLM)">📋</button>
+          </div>
+          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+        </div>
+        <div id="bibDrawer" class="bib-drawer" hidden>
+          <div class="bib-group">
+            <span class="bib-glabel">Gusto</span>
+            <button id="bibFav" class="bib-chip" type="button"
+                    title="Solo libros favoritos ⭐" aria-pressed="false">⭐</button>
+            <button id="bibAuth" class="bib-chip" type="button"
+                    title="Solo autores favoritos 👤" aria-pressed="false">👤</button>
+            <button id="bibLike" class="bib-chip" type="button"
+                    title="Solo libros que me gustan 👍" aria-pressed="false">👍</button>
+            <button id="bibDislike" class="bib-chip" type="button"
+                    title="Solo libros que no me gustan 👎" aria-pressed="false">👎</button>
+          </div>
+          <div class="bib-group">
+            <span class="bib-glabel">Origen</span>
+            <button id="bibPrim" class="bib-chip" type="button"
+                    title="Solo primigenia" aria-pressed="false">🏛️</button>
+            <span class="bib-glabel">Estado</span>
+            <button id="bibDone" class="bib-chip" type="button"
+                    title="Solo libros leídos 📖" aria-pressed="false">📖</button>
+            <!-- One 3-state chip (♂ → ♀ → ⚥ todos) replaces the old ♂/♀ pair:
+                 selecting both or neither always meant "no gender constraint",
+                 so the pair only ever had three meanings; ⚥ is the default — the
+                 catalog is not silently half a catalog. Glyph/title/aria are
+                 repainted by applyGenderUI (GENDER_CHIP owns them; a title= here
+                 would just drift). -->
+            <span class="bib-glabel">Autor</span>
+            <button id="bibGender" class="bib-chip" type="button" aria-pressed="false">⚥</button>
+          </div>
+          <div class="bib-group bib-group-wide">
+            <select id="bibCat" class="bib-cat" title="Categoría">
+              <option value="">Todas las categorías</option>
+            </select>
+            <button id="bibClear" class="bib-clear" type="button" hidden
+                    title="Quitar todos los filtros">Limpiar</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div id="bibCount" class="bib-count"></div>
+          <!-- A–Z strip: with 88k books the pager alone is ~175 ‹/› taps to reach
+               the Z's, so browsing (rather than searching a name you already know)
+               was not possible. One tap lands on the page where that author-initial
+               starts. Only the 🔤 alfabético order files books by author, so
+               renderLetters hides the strip under the date sorts — and when the
+               whole set already fits on one page. -->
+          <div id="bibLetters" class="bib-letters" role="group"
+               aria-label="Saltar a la inicial del autor" hidden></div>
+          <div id="bibPath" class="bib-path"></div>
+          <!-- 🎲 spotlight: a single random pick from the current filters,
+               separate from the capped list. Re-roll with 🎲; tap to play. -->
+          <div id="bibPick" class="bib-pick" hidden></div>
+          <div id="bibList" class="bib-list"></div>
+          <!-- Pager: shown only when the filtered set spills past one page
+               (RENDER_CAP per page). Prev/next walk the full result set. -->
+          <div id="bibPager" class="bib-pager" hidden></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== Saga + author-books modal ===================== -->
+    <!-- Opened by tapping the active-book card. Shows, in order: the book's saga
+         (Calibre series) start to end with a "🔜 Añadir saga a la cola" button in
+         its head, then every catalog book by the same author, grouped into
+         category sections so the shape of their work is visible. Rows are the
+         same cards as the biblioteca (tap to load, right-click to valorate — the
+         ✅ terminado toggle lives in that menu, not in this head). Opens
+         fullscreen (modal-full): both lists are long enough that a sheet hugging
+         its content just meant scrolling in a small box. -->
+    <div class="modal" id="authorModal" hidden>
+      <div class="modal-back" data-close></div>
+      <div class="modal-panel modal-full" role="dialog" aria-label="Saga y libros del autor">
+        <div class="modal-head">
+          <h2 id="authorTitle">Book and author</h2>
+          <!-- The SAME día/noche shelf toggle as the 📖 En curso head (one shared
+               per-device mode — js/mode.js), repeated here because this modal is
+               where books get ADDED: 🔜 cola, the category bulk-add and the saga
+               button all queue onto the shelf `currentMode()` names. Without it
+               you had to close this modal, flip the shelf in En curso, and come
+               back. Wired next to its twin in js/encurso.js so the two can never
+               show different shelves. -->
+          <button id="authorModeToggle" class="mode-toggle" type="button"
+            title="Estantería a la que se añaden los libros: noche 🌙 / día ☀️ (toca para cambiar)">🌙 Noche</button>
+          <span class="grow"></span>
+          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="authorList" class="author-list"></div>
+        </div>
+        <!-- The way back out of this modal, in one visible control: deep in the
+             trail of books tapped INSIDE it, «← título» steps to the book
+             beneath; at the root, «← En curso» / «← Biblioteca» / «← Inicio»
+             names the screen the modal was opened over and closes back to it.
+             The browser's own back button is not that route — it is a guard
+             against leaving the app, not a labelled breadcrumb. The bar floats
+             over the panel rather than sitting in the list, so it stays put (and
+             tappable) wherever the list is scrolled — see syncAuthorBack in
+             js/biblioteca.js. -->
+        <button id="authorBack" class="author-back" type="button" hidden></button>
+      </div>
+    </div>
+
+    <!-- ===================== Wishlist modal ===================== -->
+    <!-- Books wanted that the pi library does NOT have. Entries live in the
+         `audiobooks-wishlist` json-store blob keyed by normalised author|title
+         (a wished book has no catalog path yet). An entry is never removed by
+         "getting" it: every load prunes the ones the catalog now answers for,
+         and so does the Telegram EPUB ingest. See js/wishlist.js. -->
+    <div class="modal" id="wishModal" hidden>
+      <div class="modal-back" data-close></div>
+      <div class="modal-panel" role="dialog" aria-label="Lista de deseos">
+        <div class="modal-head">
+          <h2>🌠 Lista de deseos</h2>
+          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="wish-add">
+            <input id="wishTitle" class="wish-input" type="text" placeholder="Título"
+                   autocomplete="off" aria-label="Título del libro deseado" />
+            <input id="wishAuthor" class="wish-input" type="text" placeholder="Autor"
+                   autocomplete="off" aria-label="Autor del libro deseado" />
+            <button id="wishAdd" class="bib-chip bib-act" type="button"
+                    title="Añadir a la lista de deseos">➕</button>
+          </div>
+          <div id="wishCount" class="bib-count"></div>
+          <div id="wishList" class="bib-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== Seek (progress) modal ===================== -->
+    <!-- Opened by tapping the progress bar. The slider and the ±% steps edit a
+         PENDING position that only commits on "Ir a esta posición"; ✕/backdrop/
+         Cancelar close without moving. The ⏮/⏭ paragraph buttons are the one
+         exception — they live here (out of mistap range on the player) but act
+         IMMEDIATELY, then re-sync the slider to where they landed. The head
+         clocks the pending position against the book's body length. -->
+    <div class="modal" id="seekModal" hidden>
+      <div class="modal-back" data-close></div>
+      <div class="modal-panel" role="dialog" aria-label="Ir a posición">
+        <div class="modal-head">
+          <h2>📍 Posición <span id="seekVal" class="badge">0%</span>
+            <span id="seekTime" class="badge badge-time">(0h:00m / 0h:00m)</span></h2>
+          <button class="icon-btn" type="button" data-close title="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <section>
+            <input type="range" id="seekRange" class="modal-range" min="0" max="100"
+              step="1" value="0" aria-label="Posición en el libro">
+            <div class="delta-grid" id="seekDeltas" aria-label="Ajuste fino">
+              <button type="button" class="sec" data-d="-20">−20</button>
+              <button type="button" class="sec" data-d="-15">−15</button>
+              <button type="button" class="sec" data-d="-10">−10</button>
+              <button type="button" class="sec" data-d="-5">−5</button>
+              <button type="button" class="sec" data-d="-1">−1</button>
+              <button type="button" class="sec" data-d="1">+1</button>
+              <button type="button" class="sec" data-d="5">+5</button>
+              <button type="button" class="sec" data-d="10">+10</button>
+              <button type="button" class="sec" data-d="15">+15</button>
+              <button type="button" class="sec" data-d="20">+20</button>
+            </div>
+          </section>
+          <!-- Immediate, no confirmation: these move the reader as you press. -->
+          <section class="para-step" aria-label="Párrafo">
+            <button type="button" class="sec" id="seekPrevPara"
+              title="Párrafo anterior (inmediato)">⏮ Párrafo</button>
+            <button type="button" class="sec" id="seekNextPara"
+              title="Párrafo siguiente (inmediato)">Párrafo ⏭</button>
+          </section>
+          <div class="modal-actions">
+            <button type="button" class="sec" id="seekCancel">Cancelar</button>
+            <button type="button" class="go" id="seekApply">Ir a esta posición</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The speed control moved INTO the ⚙️ settings modal (see the ⚡ Velocidad
+         section there); the standalone speed modal was removed. -->
+
+    <!-- The sleep-mode blackout overlay (fullscreen pure black, faint 😴, the
+         two-drag unlock and its two rings) is GONE. It was never decoration: it
+         existed because `devicemotion` only fires while the page is visible, so
+         reading the accelerometer meant keeping the screen on, and a screen on
+         all night in bed has to be black and has to refuse a stray touch. The
+         sensor is read from below the page now (pi-shell's native listener, see
+         js/sleep.js), so sleep mode manipulates nothing. -->
+
+    <!-- `defer`, because a plain classic script BLOCKS the parser where it sits,
+         and this one is a cross-origin CDN fetch: on a cold install every byte
+         of the app behind it — including js/main.js — waited on cdnjs answering.
+         Deferred scripts still run in document order and still run before any
+         module, so js/pdf.js reads `window.pdfjsLib` exactly as before. -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      "use strict";
+      // Ask for durable storage so the browser won't silently EVICT our
+      // IndexedDB / localStorage progress under storage pressure (granted
+      // automatically for installed PWAs / engaged sites). Note: this does NOT
+      // override a manual "clear site data on exit" — that stays a user setting.
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(() => {});
+      }
+      if ("serviceWorker" in navigator) {
+        // Auto-refresh on deploy. A plain reload otherwise keeps the OLD active
+        // worker in control, so freshly-pushed modules don't appear until the
+        // SW lazily updates itself (often needs several refreshes; installed /
+        // mobile PWAs revalidate sw.js even more lazily). We instead force an
+        // update check every load and reload once when the new SW takes over.
+        //
+        // Guard: on a first-ever visit the page isn't controlled yet, and the
+        // initial clients.claim() also fires controllerchange — that's not a
+        // stale page, so only reload when a controller already existed at boot.
+        //
+        // The reload itself goes through js/reload.js (exposed by main.js as
+        // __reloadWhenSynced): a new SW taking over mid-upload must not kill the
+        // in-flight progress PATCH — the gate waits for the confirming push and
+        // reloads then. Before main.js evaluates nothing is in flight, so a plain
+        // reload is correct.
+        // THE RELOAD BUDGET. Both latches — this handler's `reloading` and the
+        // one in js/reload.js — are per-DOCUMENT, so they cap a single load at
+        // one refresh and nothing caps the SEQUENCE. Anything that makes the
+        // browser see a new worker on several consecutive loads therefore
+        // reloads the app several consecutive times, which is exactly the
+        // "it refreshed two or three times and then settled" report. Two known
+        // producers: sw.js is an ES module whose update check also covers its
+        // imports (js/db.js, js/progress-merge.js, js/config.js), so a
+        // non-atomic deploy can be seen as version X then version Y one load
+        // apart; and an install whose precache rejects leaves the OLD worker
+        // active, so the next load retries the whole install→claim→reload cycle.
+        // Both are worth fixing at the source (sw.js retries its precache now),
+        // but neither can be fully prevented from here — a budget can. One
+        // automatic reload per tab per window; the ⚙️ build line still refreshes
+        // on demand, because that one the user asked for.
+        const RELOAD_BUDGET_MS = 30000;
+        const RELOAD_STAMP = "audiobooks:autoReloadAt";
+        const mayAutoReload = () => {
+          try {
+            const last = Number(sessionStorage.getItem(RELOAD_STAMP));
+            if (Number.isFinite(last) && last > 0 && Date.now() - last < RELOAD_BUDGET_MS) {
+              return false;
+            }
+            sessionStorage.setItem(RELOAD_STAMP, String(Date.now()));
+          } catch (_) {
+            // No sessionStorage (private mode, blocked storage) → no budget to
+            // keep, and the per-document latches still hold. Allow it.
+          }
+          return true;
+        };
+        const hadController = !!navigator.serviceWorker.controller;
+        let reloading = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!hadController || reloading) return;
+          if (!mayAutoReload()) {
+            console.warn("[sw] takeover ignored: auto-reload budget spent");
+            return;
+          }
+          reloading = true;
+          if (window.__reloadWhenSynced) window.__reloadWhenSynced();
+          else window.location.reload();
+        });
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("sw.js", { updateViaCache: "none", type: "module" })
+            .then((reg) => {
+              console.log("Service Worker registered:", reg.scope);
+              // Don't trust the browser's opportunistic sw.js update check;
+              // ask for one now so a refresh right after a push picks it up.
+              reg.update();
+            })
+            .catch((err) =>
+              console.error("Service Worker registration failed:", err),
+            );
+        });
+      }
+    </script>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

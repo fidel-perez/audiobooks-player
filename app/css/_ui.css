@@ -1,0 +1,155 @@
+/*
+ * In-page confirm dialog + custom <select> pickers (see js/ui.js). They reuse
+ * the .modal-panel shell from _modal.css but sit on their own `.ui-modal`
+ * container (z-index above .modal so a picker can open over the biblioteca).
+ */
+
+.ui-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.ui-back {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 560px) {
+  .ui-modal {
+    align-items: center;
+    padding: 16px;
+  }
+}
+
+/* ---------- confirm dialog ---------- */
+/* Dialogs are compact + always centered (even on mobile), unlike bottom sheets. */
+.ui-dialog-modal {
+  align-items: center;
+  padding: 16px;
+}
+
+.ui-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px var(--shadow);
+  overflow: hidden;
+}
+
+.ui-dialog-body {
+  padding: 18px 18px 4px;
+}
+
+.ui-dialog-title {
+  margin-bottom: 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ui-dialog-msg {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--txt);
+}
+
+.ui-dialog-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px 18px;
+}
+
+/* ---------- select sheet ---------- */
+.ui-sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ui-sheet-group {
+  margin: 10px 2px 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.ui-sheet-group:first-child {
+  margin-top: 0;
+}
+
+.ui-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--txt);
+  text-align: left;
+  cursor: pointer;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Leading tick column: blank until selected, so labels stay aligned. */
+.ui-sheet-item::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 1.1em;
+  text-align: center;
+}
+
+.ui-sheet-item.sel {
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.ui-sheet-item.sel::before {
+  content: "✓";
+}
+
+.ui-sheet-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- dropdown trigger (replaces the native select face) ---------- */
+/* The native <select> stays in the DOM as the value store, just hidden. */
+.dd-native {
+  display: none !important;
+}
+
+/* Base look comes from the `select, …, .dd-trigger` rule in _base.css; this
+   only adds the flex layout + caret that a <button> face needs. */
+.dd-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.dd-trigger .dd-lbl {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dd-trigger .dd-caret {
+  flex: 0 0 auto;
+  font-size: 0.7em;
+  opacity: 0.7;
+}

@@ -1,0 +1,22 @@
+/* Touch long-press selects text and fires the callout menu, and on these apps a
+   long press already means something else. Inputs keep both: a selection there
+   was asked for, and iOS hangs its paste menu off the same gesture.
+   A rule with a class beats `*`, so an app that wants selection back says so. */
+@media (pointer: coarse) {
+  *,
+  ::before,
+  ::after {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable=""],
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}

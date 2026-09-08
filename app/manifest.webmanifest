@@ -1,0 +1,20 @@
+{
+  "name": "Audiolibros",
+  "short_name": "Audiolibros",
+  "description": "Lector de documentos en voz alta con memoria de posición y sincronización.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

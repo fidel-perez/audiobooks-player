@@ -1,0 +1,313 @@
+/*
+ * Reset, page frame, typography, cards, form fields, and the compact top bar.
+ */
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Disable the browser's pull-to-refresh: an accidental over-scroll at the top
+   (common while scrolling the transcript) otherwise reloads the page and kills
+   playback. `contain` also stops scroll-chaining out of inner scrollers. */
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
+body {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+  color: var(--txt);
+  background: var(--bg);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* ---------- compact top bar ---------- */
+.topbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* ---------- read-only status chips (left of the top bar) ---------- */
+/* Wraps rather than scrolls: on a 360px phone a chip pushed off-screen would
+   say nothing at all. `.is-short` marks the one-shot preset in the warn colour
+   the ⚙️ panel already uses for it. */
+.main-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* Shrinkable, so three chips never push 📚 and ⚙️ off a narrow phone. */
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.stat-chip {
+  /* Held, 😴 and ⚡ mean a second thing, and Android answers a long press on
+     text with a selection instead. */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  padding: 3px 9px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--muted);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.stat-chip.is-short {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.grow {
+  flex: 1;
+}
+
+.icon-btn {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--sec-fg);
+  cursor: pointer;
+  background: var(--sec-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- sync banner (unsynced progress + no connection) ---------- */
+/* Shown by js/progress.js while reading progress can't reach the server; it
+   retries automatically and hides itself once a push confirms. Deliberately
+   loud (warn colour) so it's noticed during playback and the user enables data.
+   Replaced the old 🌅 manual "push state" button.
+
+   It sits at the BOTTOM of the main screen (below #toast, see index.html), so
+   the margin is above it: showing/hiding it must not move anything the reader is
+   pointing at. */
+.sync-banner {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--accent-fg);
+  background: var(--warn);
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  cursor: pointer; /* tap to retry now — js/progress.js retrySyncNow */
+}
+.sync-banner:active {
+  filter: brightness(0.92);
+}
+.sync-banner[hidden] {
+  display: none;
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Day/night en-curso shelf cue on the in-modal toggle (.mode-toggle).
+   Blue = night, yellow = day. */
+.mode-toggle.mode-night {
+  background: #3b5bdb;
+  border-color: #3b5bdb;
+  color: #fff;
+}
+.mode-toggle.mode-day {
+  background: #f4c430;
+  border-color: #e0b020;
+  color: #3a2f00;
+}
+
+/* ---------- cards ---------- */
+.card {
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+select,
+input[type="number"],
+input[type="text"],
+.dd-trigger {
+  width: 100%;
+  padding: 8px 9px;
+  font-size: 0.95rem;
+  color: var(--txt);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.row > div {
+  flex: 1;
+  min-width: 130px;
+}
+
+kbd {
+  padding: 1px 6px;
+  font-size: 0.78rem;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+small {
+  color: var(--muted);
+}
+
+.hint {
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.hidden {
+  display: none;
+}
+
+/* The sleep-mode blackout (overlay, drag glyph, drop rings, shake keyframes and
+   the mini-dock hide that went with it) is GONE — sleep mode no longer touches
+   the screen at all. It painted the screen black so the page could stay VISIBLE,
+   which was the only way `devicemotion` keeps firing; the shell reads the
+   accelerometer natively now (js/sleep.js). */
+
+/* ===================== busy / loading (see js/busy.js) =====================
+
+   The spinner animates `transform` and NOTHING else, on purpose: transform and
+   opacity are the two properties a browser can animate on the compositor thread,
+   which is the only thread still moving while the main thread is blocked parsing
+   the catalog or sorting 88 000 rows. A spinner driven by anything else — a
+   timer, a text/emoji swap, an animated width — freezes exactly when the user
+   most needs to be told the app is alive, and then reads as proof that it isn't. */
+.spin {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Spinner + label, for a list/card slot that is loading rather than empty. */
+.loading-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted, var(--txt));
+}
+
+/* The centered, blocking overlay (js/busy.js#showBusyOverlay) — the app's ONE
+   spinner. There is no per-control ring any more: a spinner nested in the button
+   or chip you pressed was removed by request. Every wait that needs feedback
+   (opening the library onto the 88k render, re-filtering/re-sorting it, pressing
+   ▶ onto a Piper synthesis) raises this curtain instead, and it swallows taps
+   while up — a second press on any of those has no good answer but "wait".
+
+   `.is-active` is set on the FIRST frame and blocks immediately. `.is-shown`
+   adds the dim + spinner: for an ASYNC wait it is delay-gated (a fast action
+   drops the curtain before it elapses, so nothing flashes); for a SYNCHRONOUS
+   block it is set at once and painted before the freeze. Sits just below the
+   blackout (2147483647) so it covers every modal and picker but never the
+   screensaver. */
+.busy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  transition: background-color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.busy-overlay.is-active {
+  display: flex;
+}
+
+.busy-overlay.is-shown {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.busy-overlay-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  /* Faded in with the dim, and only then: an action that finishes inside the
+     reveal delay never shows a spinner at all. */
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.busy-overlay.is-shown .busy-overlay-box {
+  opacity: 1;
+}
+
+/* A bigger sibling of `.spin` — same compositor `transform` animation, so it
+   keeps turning through the main-thread block it is reporting. */
+.busy-overlay-ring {
+  width: 2.6em;
+  height: 2.6em;
+  border-width: 3px;
+}
+
+.busy-overlay-label {
+  max-width: min(80vw, 22rem);
+  text-align: center;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.busy-overlay-label:empty {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the ring — it is the whole message — but let it step rather than sweep,
+     which is the part that reads as motion. Covers the overlay spinner too, since
+     `.busy-overlay-ring` is a `.spin`. */
+  .spin {
+    animation-duration: 2.4s;
+    animation-timing-function: steps(8, end);
+  }
+}

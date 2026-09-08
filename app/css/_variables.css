@@ -1,0 +1,50 @@
+/*
+ * Theme tokens.
+ *
+ * The app is light-only (operator preference). `<html data-theme="light">` is
+ * hard-coded and there is no toggle. The dark block below is kept as inert
+ * reference tokens only — nothing sets `data-theme="dark"` anymore.
+ */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1419;
+  --card: #1b232d;
+  --txt: #e6edf3;
+  --muted: #8b98a5;
+  --accent: #3b82f6;
+  --accent-fg: #ffffff;
+  --accent2: #22c55e;
+  --border: #2a3540;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --input-bg: #0f161e;
+  --sec-bg: #2c3a48;
+  --sec-fg: var(--txt);
+  --chip-bg: #22303d;
+  --chip-fg: var(--txt);
+  --now-fg: var(--muted);
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f6fa;
+  --card: #ffffff;
+  --txt: #1a2230;
+  --muted: #5c6a7a;
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --accent2: #16a34a;
+  --border: #dbe1ea;
+  --warn: #b45309;
+  --danger: #dc2626;
+  --input-bg: #eef2f8;
+  --sec-bg: #e2e8f0;
+  --sec-fg: #1a2230;
+  --chip-bg: #e8edf4;
+  --chip-fg: #1a2230;
+  --now-fg: #5c6a7a;
+  --shadow: rgba(15, 23, 42, 0.12);
+}

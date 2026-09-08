@@ -1,0 +1,28 @@
+/* A modal sits at the top of the screen, not the middle. On a phone the soft
+   keyboard covers the lower half of the viewport the moment an input inside
+   the modal takes focus, so a centered modal is half hidden exactly when it
+   is being edited; a top-justified modal keeps its fields on screen. dvh (not
+   vh) so the gap tracks the viewport the keyboard shrinks.
+   These rules score 0, so any app rule naming a class beats them: an overlay
+   that really belongs at the bottom, or wants its own gap, re-declares
+   `align-items` / padding and wins. An overlay class outside this list teaches
+   the list its name. */
+:where(.modal-overlay, .modal-backdrop, .modal) {
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: min(4rem, 8dvh);
+  /* An overlay that scrolls its own tall content (macrotrackingapp's
+     overflow:auto backdrop) stops at its own edge instead of chaining the
+     scroll into the page behind it. An overlay with nothing to scroll is not
+     a scroller, so this property is inert there and the touch guard in
+     pullToRefreshGuard.js cancels those drags instead — its MODAL_SELECTOR
+     is this list plus the dialog:modal rule below, and
+     tests/modal-scroll-page-frozen.test.js pins the two equal. */
+  overscroll-behavior: contain;
+}
+
+/* The UA centers a modal <dialog> with `margin: auto`; author origin beats
+   that at any specificity, so the same top gap rides a margin. */
+:where(dialog:modal) {
+  margin: min(4rem, 8dvh) auto 0;
+}
