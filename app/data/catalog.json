@@ -1,0 +1,148 @@
+{
+  "books": [
+    {
+      "id": "se-pride-and-prejudice",
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "lang": "en",
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub"
+    },
+    {
+      "id": "se-frankenstein",
+      "title": "Frankenstein",
+      "author": "Mary Wollstonecraft Shelley",
+      "lang": "en",
+      "source": "standardebooks",
+      "url": "https://standardebooks.org/ebooks/mary-shelley/frankenstein/downloads/mary-shelley_frankenstein.epub"
+    },
+    {
+      "id": "gu-2701",
+      "title": "Moby-Dick; or, The Whale",
+      "author": "Herman Melville",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/2701.epub3.images"
+    },
+    {
+      "id": "gu-345",
+      "title": "Dracula",
+      "author": "Bram Stoker",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/345.epub3.images"
+    },
+    {
+      "id": "gu-1661",
+      "title": "The Adventures of Sherlock Holmes",
+      "author": "Arthur Conan Doyle",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/1661.epub3.images"
+    },
+    {
+      "id": "gu-98",
+      "title": "A Tale of Two Cities",
+      "author": "Charles Dickens",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/98.epub3.images"
+    },
+    {
+      "id": "gu-174",
+      "title": "The Picture of Dorian Gray",
+      "author": "Oscar Wilde",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/174.epub3.images"
+    },
+    {
+      "id": "gu-11",
+      "title": "Alice's Adventures in Wonderland",
+      "author": "Lewis Carroll",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/11.epub3.images"
+    },
+    {
+      "id": "gu-2600",
+      "title": "War and Peace",
+      "author": "Leo Tolstoy",
+      "lang": "en",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/2600.epub3.images"
+    },
+    {
+      "id": "gu-2000",
+      "title": "Don Quijote",
+      "author": "Miguel de Cervantes Saavedra",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/2000.epub3.images"
+    },
+    {
+      "id": "gu-21143",
+      "title": "Las Fábulas de Esopo, Vol. 01",
+      "author": "Esopo",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/21143.epub3.images"
+    },
+    {
+      "id": "gu-70219",
+      "title": "Historia natural y moral de las Indias (vol. 1)",
+      "author": "José de Acosta",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/70219.epub3.images"
+    },
+    {
+      "id": "gu-66023",
+      "title": "Tragedias",
+      "author": "Esquilo",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/66023.epub3.images"
+    },
+    {
+      "id": "gu-39947",
+      "title": "Historia de Venezuela, Tomo I",
+      "author": "Pedro de Aguado",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/39947.epub3.images"
+    },
+    {
+      "id": "gu-57303",
+      "title": "La Divina Comedia",
+      "author": "Dante Alighieri",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/57303.epub3.images"
+    },
+    {
+      "id": "gu-61415",
+      "title": "Místicas; poesías",
+      "author": "María Raquel Adler",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/61415.epub3.images"
+    },
+    {
+      "id": "gu-29640",
+      "title": "Germana",
+      "author": "Edmond About",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/29640.epub3.images"
+    },
+    {
+      "id": "gu-26404",
+      "title": "La nariz de un notario",
+      "author": "Edmond About",
+      "lang": "es",
+      "source": "gutenberg",
+      "url": "https://www.gutenberg.org/ebooks/26404.epub3.images"
+    }
+  ]
+}
