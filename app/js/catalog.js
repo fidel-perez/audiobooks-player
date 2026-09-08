@@ -32,6 +32,7 @@ import {
 } from "./progress.js";
 import { apiFetch } from "./storage.js";
 import { currentMode, normMode } from "./mode.js";
+import { buildWikisourceEpub } from "./wikisourceEpub.js";
 
 const CATALOG_URL = "data/catalog.json";
 const QUEUE_KEY = "audiobooks-queue";
@@ -73,6 +74,7 @@ export function ensureCatalog() {
             lang: b.lang,
             source: b.source,
             url: b.url,
+            wsTitle: b.wsTitle,
           })),
         };
         return true;
@@ -329,21 +331,31 @@ async function loadBook(bk, forcePlay, select) {
     activateDoc(openIdx, forcePlay, select);
     return true;
   }
-  if (!bk.url) {
+  if (!bk.url && bk.source !== "wikisource") {
     setStatus(`"${bk.t}" no tiene un origen descargable.`);
     return false;
   }
   setStatus(`Descargando "${bk.t}"…`);
   let file;
   try {
-    const r = await fetch(bk.url);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const blob = await r.blob();
-    // bk.url may carry Standard Ebooks' ?source=download; strip the query
-    // before the split, or the "filename" ends in that instead of .epub.
-    const path = bk.url.split("?")[0];
-    const name = decodeURIComponent(path.split("/").pop() || "") || `${shortName(bk.t)}.epub`;
-    file = new File([blob], name, { type: blob.type || "application/epub+zip" });
+    if (bk.source === "wikisource") {
+      const blob = await buildWikisourceEpub({
+        title: bk.t,
+        author: bk.a,
+        wsTitle: bk.wsTitle,
+        lang: bk.lang,
+      });
+      file = new File([blob], `${shortName(bk.t)}.epub`, { type: "application/epub+zip" });
+    } else {
+      const r = await fetch(bk.url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const blob = await r.blob();
+      // bk.url may carry Standard Ebooks' ?source=download; strip the query
+      // before the split, or the "filename" ends in that instead of .epub.
+      const path = bk.url.split("?")[0];
+      const name = decodeURIComponent(path.split("/").pop() || "") || `${shortName(bk.t)}.epub`;
+      file = new File([blob], name, { type: blob.type || "application/epub+zip" });
+    }
   } catch (e) {
     setStatus(`Error al descargar "${bk.t}": ${e.message}`);
     return false;

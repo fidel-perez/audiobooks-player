@@ -73,76 +73,76 @@
       "url": "https://standardebooks.org/ebooks/leo-tolstoy/war-and-peace/louise-maude_aylmer-maude/downloads/leo-tolstoy_war-and-peace_louise-maude-aylmer-maude.epub?source=download"
     },
     {
-      "id": "gu-2000",
-      "title": "Don Quijote",
-      "author": "Miguel de Cervantes Saavedra",
+      "id": "ws-el-matadero",
+      "title": "El Matadero",
+      "author": "Esteban Echeverría",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/2000.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "El Matadero"
     },
     {
-      "id": "gu-21143",
-      "title": "Las Fábulas de Esopo, Vol. 01",
-      "author": "Esopo",
+      "id": "ws-el-beso",
+      "title": "El beso. Leyenda toledana",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/21143.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "El beso. Leyenda toledana"
     },
     {
-      "id": "gu-70219",
-      "title": "Historia natural y moral de las Indias (vol. 1)",
-      "author": "José de Acosta",
+      "id": "ws-la-ajorca-de-oro",
+      "title": "Leyenda toledana. La ajorca de oro",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/70219.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "Leyenda toledana. La ajorca de oro"
     },
     {
-      "id": "gu-66023",
-      "title": "Tragedias",
-      "author": "Esquilo",
+      "id": "ws-el-miserere",
+      "title": "El miserere",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/66023.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "El miserere (Bécquer)"
     },
     {
-      "id": "gu-39947",
-      "title": "Historia de Venezuela, Tomo I",
-      "author": "Pedro de Aguado",
+      "id": "ws-los-ojos-verdes",
+      "title": "Los ojos verdes",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/39947.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "Los ojos verdes"
     },
     {
-      "id": "gu-57303",
-      "title": "La Divina Comedia",
-      "author": "Dante Alighieri",
+      "id": "ws-el-monte-de-las-animas",
+      "title": "El monte de las ánimas",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/57303.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "El monte de las ánimas"
     },
     {
-      "id": "gu-61415",
-      "title": "Místicas; poesías",
-      "author": "María Raquel Adler",
+      "id": "ws-el-rayo-de-luna",
+      "title": "El rayo de luna",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/61415.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "El rayo de luna"
     },
     {
-      "id": "gu-29640",
-      "title": "Germana",
-      "author": "Edmond About",
+      "id": "ws-maese-perez",
+      "title": "Maese Pérez el organista",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/29640.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "Maese Pérez el organista"
     },
     {
-      "id": "gu-26404",
-      "title": "La nariz de un notario",
-      "author": "Edmond About",
+      "id": "ws-el-cristo-de-la-calavera",
+      "title": "El Cristo de la calavera",
+      "author": "Gustavo Adolfo Bécquer",
       "lang": "es",
-      "source": "gutenberg",
-      "url": "https://www.gutenberg.org/ebooks/26404.epub3.images"
+      "source": "wikisource",
+      "wsTitle": "El Cristo de la calavera"
     }
   ]
 }
