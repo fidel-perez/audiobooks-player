@@ -44,7 +44,7 @@
  */
 
 import { LS_PROGRESS_LOG } from "./config.js";
-import { apiFetch } from "../_shared/net/transport.js";
+import { apiFetch } from "./storage.js";
 
 const API_BASE = "/api/";
 const LOG_KEY = "audiobooks-progress-log";

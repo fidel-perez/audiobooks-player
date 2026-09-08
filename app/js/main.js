@@ -4,7 +4,6 @@
  */
 
 import { $, setStatus, showToast } from "./dom.js";
-import { installSecureFace } from "../_shared/net/secureFace.js";
 import { holdable } from "../_shared/ui/holdable.js";
 import { installPullToRefreshGuard } from "../_shared/ui/pullToRefreshGuard.js";
 import { acquireWake, watchPlaybackProtection } from "./background.js";
@@ -127,17 +126,6 @@ import {
 } from "./piper.js";
 import { MODULATION, MODULATION_DEFAULT } from "./modulation.js";
 import { enhanceAllSelects } from "./ui.js";
-
-// Face preference. Caddy already 302s /main/audiobooks onto a secure face by
-// the HOST the client arrived on, but the server cannot know a tailnet client
-// is ALSO on the LAN: a phone that opened the tailnet URL at home lands on the
-// tailnet face and stays. This client-side probe hops it DOWN to the LAN https
-// face when that face answers — no VPN needed, and since progress backup is a
-// same-origin relative /api/ path, the backup then travels over the LAN too.
-// Away from home the LAN probe times out and the tailnet face is kept.
-// notice:false — audiobooks is force-secured by Caddy, so a plain-http face is
-// only ever the ?lan=1 escape hatch, not an error worth a standing chip.
-installSecureFace({ notice: false });
 
 /* ===================== modals (settings + biblioteca) ===================== */
 wireModal("settingsModal");

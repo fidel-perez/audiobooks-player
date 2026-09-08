@@ -17,8 +17,7 @@ import { $, showSyncBanner, hideSyncBanner } from "./dom.js";
 import { noteRead } from "./progresslog.js";
 import { idbGetMeta, idbSetMeta } from "./db.js";
 import { mergeServerMap, sanitizeMap, isTombstone } from "./progress-merge.js";
-import { apiFetch } from "../_shared/net/transport.js";
-import { isStaleAnswer } from "../_shared/net/connectivity.js";
+import { apiFetch } from "./storage.js";
 
 /* ===================== json-store mirror =====================
  * Besides the per-device localStorage position, mirror each doc's progress to
@@ -137,16 +136,10 @@ async function pullServerMap() {
       headers: { Accept: "application/json" },
       credentials: "same-origin",
     });
-    // A RESOLVED RESPONSE IS NOT ALWAYS A SERVER. Under the shell an /api GET
-    // that reached no face still comes back `200`, out of the phone's own disk
-    // cache (`serve.rs` `unreachable` → `apicache`), and that 200 used to be read
-    // here as "the server answered": `lastFailWasNetwork` went false, the write
-    // that followed failed for the real reason (no face), and the banner reported
-    // the WRONG one — "el servidor no acepta la sincronización" on a phone whose
-    // request never left the device. A stale answer is evidence about the DATA,
-    // never about the network.
-    const stale = isStaleAnswer(r);
-    lastFailWasNetwork = stale; // a cached copy proves nothing was reached
+    // js/storage.js never answers from a stale cache — IndexedDB and a
+    // sync-server fetch are both live reads, so this is always false.
+    const stale = false;
+    lastFailWasNetwork = stale;
     if (!r.ok) return false; // 5xx / transient — must NOT authorise an overwrite
     const j = await r.json();
     if (j && typeof j === "object" && !Array.isArray(j)) {
@@ -822,28 +815,15 @@ function registerBackgroundSync() {
 }
 
 /**
- * What to tell the user about a push that can't land. The app is served from the
- * tailnet host and `/api/` is same-origin, so "can't sync" has three causes that
- * need three different actions — and the banner used to assert the first one for
- * all of them ("activa Internet"), which is how a phone that WAS online sat there
- * being told to go online. Same trust rules as _shared/net/connectivity.js:
+ * What to tell the user about a push that can't land — "can't sync" has
+ * three causes needing three different messages, not one flat "go online":
  *
- *   - `navigator.onLine === false` is the OS saying it has no interface: trust it
- *     (the reverse, `=== true`, proves nothing) → enable Internet.
- *   - the fetch REJECTED: the origin is unreachable though the device has a
- *     network. The page still opens from the service-worker cache, so this is
- *     invisible otherwise. This used to say "reconnect Tailscale", flatly, and
- *     that is only ONE of the two ways to get here: the Pi is dual-homed, so an
- *     app that opened on the WIRED deSEC name and then moved to the backup wifi
- *     is on an origin whose A record it has no route to — Tailscale is beside
- *     the point and turning it on fixes nothing. Both causes have the same cure,
- *     which is to get back onto a face that answers, so the text names the face
- *     rather than the VPN. `_shared/net/secureFace.js` now probes for that on
- *     load and hops by itself; this banner is what the user sees in the window
- *     before it does, or when no face at all is reachable.
- *   - the server ANSWERED with a non-ok status (5xx mid-deploy, a sick
- *     json-store, or the portless .ts.net Funnel origin, which 502s every app
- *     path): the network is fine and there is nothing for the user to reconnect.
+ *   - `navigator.onLine === false`: the OS says it has no interface, trust
+ *     it (the reverse, `=== true`, proves nothing) → enable Internet.
+ *   - the fetch REJECTED: the sync-server URL is unreachable though the
+ *     device has a network → check the address in Settings.
+ *   - the server ANSWERED with a non-ok status (5xx, a sick backend): the
+ *     network is fine and there is nothing for the user to reconnect.
  */
 // Which of those two the last failed round-trip was. Network (reject) is the
 // common case and the one we assume before any evidence lands.

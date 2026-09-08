@@ -101,7 +101,7 @@ import {
   spinnerLine,
   withBusyOverlay,
 } from "./busy.js";
-import { apiFetch } from "../_shared/net/transport.js";
+import { apiFetch } from "./storage.js";
 
 const ROOT = "/biblioteca/";
 const CATALOG_URL = "/biblioteca-index/catalog.json";

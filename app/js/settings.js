@@ -35,7 +35,7 @@
  * the reader.
  */
 
-import { apiFetch } from "../_shared/net/transport.js";
+import { apiFetch } from "./storage.js";
 
 const API_BASE = "/api/";
 const SETTINGS_KEY = "audiobooks-settings";

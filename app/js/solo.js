@@ -55,7 +55,7 @@
  * already means.
  */
 
-import { apiFetch } from "../_shared/net/transport.js";
+import { apiFetch } from "./storage.js";
 
 const CHANNEL = "audiobooks:playback";
 const LS_CLAIM = "audiobooks:playbackClaim";
