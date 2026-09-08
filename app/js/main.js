@@ -101,11 +101,11 @@ import {
 import { bindModalEsc, closeModal, openModal, wireModal } from "./modal.js";
 import {
   advanceAfterFinish,
-  bindBiblioteca,
-  initBiblioteca,
+  bindCatalog,
+  initCatalog,
   openCatalogBook,
   settleBootCard,
-} from "./biblioteca.js";
+} from "./catalog.js";
 import { bindEnCurso, flipShelf } from "./encurso.js";
 import { MODE_META } from "./mode.js";
 import { openProgressLog, wireProgressLog } from "./logview.js";
@@ -128,7 +128,7 @@ import {
 import { MODULATION, MODULATION_DEFAULT } from "./modulation.js";
 import { enhanceAllSelects } from "./ui.js";
 
-/* ===================== modals (settings + biblioteca) ===================== */
+/* ===================== modals (settings + catalog) ===================== */
 wireModal("settingsModal");
 wireProgressLog();
 bindModalEsc();
@@ -459,9 +459,9 @@ $("buildInfo")?.addEventListener("click", async () => {
   // Harmless if the takeover wins the race: reloadWhenSynced is latched.
   setTimeout(refresh, HANDOVER_MS);
 });
-bindBiblioteca();
+bindCatalog();
 bindEnCurso();
-// NOTE: initBiblioteca() is deliberately NOT called here — see the startup block
+// NOTE: initCatalog() is deliberately NOT called here — see the startup block
 // at the bottom. It preloads the catalog, favorites, queue and offline book
 // buffer, which the book you were reading needs none of.
 
@@ -1298,7 +1298,7 @@ async function restoreLibrary() {
   } catch (_) {
     // Blocked / private mode / a wedged upgrade. Say so rather than render an
     // indistinguishable "no books" state; the catalog fallback still runs.
-    setStatus("No se pudo leer la biblioteca local de este dispositivo.");
+    setStatus("No se pudo leer la colección local de este dispositivo.");
     return;
   }
   if (!stored?.length) return;
@@ -1347,7 +1347,7 @@ function restoreLastBookFromCatalog() {
   if (!key) return false;
   const entry = catalogEntryFor(key);
   if (!entry) return false;
-  setStatus(`Recuperando "${entry.title}" de la biblioteca…`);
+  setStatus(`Recuperando "${entry.title}" del catálogo…`);
   openCatalogBook(entry.src, entry.title);
   return true;
 }
@@ -1374,7 +1374,7 @@ function tryDeriveRestore() {
   const bk = mostRecentSyncedBook();
   if (!bk) return;
   bootRestoreOpened = true;
-  setStatus(`Recuperando "${bk.title}" de la biblioteca…`);
+  setStatus(`Recuperando "${bk.title}" del catálogo…`);
   openCatalogBook(bk.src, bk.title); // select-only: never auto-plays
 }
 
@@ -1389,7 +1389,7 @@ installPullToRefreshGuard();
 
 // Boot order is a priority, not a formality: the ONE thing the operator opened
 // the app for is the book they were reading, so it goes first and everything
-// else queues behind it. `initBiblioteca` used to run at import time, ahead of
+// else queues behind it. `initCatalog` used to run at import time, ahead of
 // this — it fetches the whole catalog (a JSON blob it then indexes on the main
 // thread), the favorites/reactions blobs, the queue, and then downloads book
 // files into the offline buffer. All of that competed with the IndexedDB read +
@@ -1413,6 +1413,6 @@ installPullToRefreshGuard();
     // event will (it may still be in flight). Either ordering restores once.
     bootSettled = true;
     tryDeriveRestore();
-    initBiblioteca();
+    initCatalog();
   }
 })();

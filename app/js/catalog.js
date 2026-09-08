@@ -50,7 +50,7 @@ let libraryUp = null; // null = not probed yet; true/false once ensureCatalog se
 // Play queue: `[{id, mode}]`, day/night shelves like the pi build (mode.js).
 let queue = [];
 
-export async function initBiblioteca() {
+export async function initCatalog() {
   libraryUp = await ensureCatalog();
   await refreshQueue();
   refreshActiveBookCard();
@@ -513,7 +513,7 @@ function bookRow(bk) {
 
 let searchQuery = "";
 
-export async function openBiblioteca() {
+export async function openCatalog() {
   openModal("bibModal");
   if (!catalog) {
     const list = $("bibList");
@@ -715,12 +715,12 @@ export function settleBootCard() {
 
 /* ===================== wiring ===================== */
 
-export function bindBiblioteca() {
+export function bindCatalog() {
   wireModal("bibModal");
   wireModal("bookModal");
 
-  const btn = $("bibliotecaBtn");
-  if (btn) btn.addEventListener("click", openBiblioteca);
+  const btn = $("catalogBtn");
+  if (btn) btn.addEventListener("click", openCatalog);
 
   document.addEventListener("audiobooks:activated", (e) => renderActiveBookCard(e.detail?.doc));
   document.addEventListener("audiobooks:cleared", clearActiveBookCard);

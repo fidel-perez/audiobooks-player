@@ -16,7 +16,7 @@
  * every pre-existing in-progress book lands on the night shelf after this ships.
  *
  * SO: `currentMode()` may be read ONLY where a book is PUT somewhere — a real
- * open (library.js#handleFiles) and a queue add (biblioteca.js#addToQueue). The
+ * open (library.js#handleFiles) and a queue add (catalog.js#addToQueue). The
  * toggle itself is NOT such a site: it switches shelf and moves nothing, though
  * it parks the off-shelf book (library.js#syncActiveToShelf). Every
  * other site reads the shelf OFF the book (`doc.mode`, the progress entry's

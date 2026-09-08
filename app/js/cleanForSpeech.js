@@ -28,7 +28,7 @@
  *   - a slash read as "barra" → `km/h`, `amor/odio`, `3/4`
  *   - a footnote marker flattened into its word → `cumplidos1` → `cumplidos`
  *
- * THE RULE WHEN THE TWO CONFLICT: easier listening beats fidelity. A page
+ * THE RULE WHEN THE TWO CONFLICT: easier listening beats accuracy. A page
  * citation, a postal code, an ISBN and a catalog id are all DROPPED rather than
  * spoken — they exist for a reader with the book open, never for someone
  * falling asleep. Nothing that carries story is ever dropped on that argument.
@@ -285,7 +285,7 @@ const DROP_REFS = [
 //   "op. cit."   → "op cit"                  "cf."       → "ce efe"
 //   "vv. aa."    → "ube ube a a"             "loc. cit." → "lok cit"
 //
-// EASIER LISTENING BEATS FIDELITY here: a page reference is for a reader with
+// EASIER LISTENING BEATS ACCURACY here: a page reference is for a reader with
 // the book open, never for someone falling asleep, so the whole citation goes
 // rather than being spoken as words.
 const DROP_CITATIONS = [

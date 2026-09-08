@@ -101,7 +101,7 @@ export const STORE = "docs";
 // device hasn't opened yet, and — when the queue is short — a few random picks
 // from the current filters. IndexedDB, NOT the SW Cache Storage: the SW purges
 // its whole cache on every CACHE_NAME bump, which would throw the buffer away on
-// each deploy. See js/biblioteca.js syncOfflineBuffer.
+// each deploy. See js/catalog.js syncOfflineBuffer.
 export const FILE_STORE = "files";
 // The random top-up target: how many random in-filter picks to hold so a night
 // offline still auto-advances into a fresh book. Only the QUEUE eats into this

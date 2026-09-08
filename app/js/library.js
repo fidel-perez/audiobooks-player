@@ -256,7 +256,7 @@ export function activateDoc(i, forcePlay, select) {
   $("controls").hidden = false;
   renderChapters();
   renderTabs();
-  // The old status + resume-note lines are gone: biblioteca.js renders a
+  // The old status + resume-note lines are gone: catalog.js renders a
   // book card into #bookCard in their place (title + author, right-click to
   // valorate, tap for the author's other books). Fire the event it listens on.
   document.dispatchEvent(
@@ -457,11 +457,11 @@ export async function evictOneFinished() {
 
 /* ===================== loading / clearing ===================== */
 /**
- * Parse + persist books into the library. The ONLY caller is the biblioteca's
- * catalog download (openCatalogBook / loadBook), which always passes `srcPath` +
- * `author`; the ➕ local-file picker that used to call it with neither is gone,
- * pending a redo as an upload INTO the raspi biblioteca. The `srcPath`-less path
- * is kept working (a doc with no `src` just doesn't sync cross-device).
+ * Parse + persist books into the library. The ONLY caller is the catalog
+ * download (openCatalogBook / loadBook), which always passes `srcPath` +
+ * `author`; the ➕ local-file picker that used to call it with neither is
+ * gone. The `srcPath`-less path is kept working (a doc with no `src` just
+ * doesn't sync cross-device).
  */
 export async function handleFiles(files, srcPath, author) {
   if (!files.length) return;
@@ -503,11 +503,9 @@ export async function handleFiles(files, srcPath, author) {
       doc.order = Date.now();
       // Opening a fresh book puts it on the CURRENT en-curso shelf (day/night).
       doc.mode = currentMode();
-      // Remember the raspi-library path + author so this book syncs to the
+      // Remember the catalog path + author so this book syncs to the
       // cross-device "en curso" shelf AND its author page resolves even when the
-      // catalog can't (rebuilt / momentarily down). A FUTURE "upload a book"
-      // feature will put uploads INTO the raspi biblioteca, so they'll carry a
-      // src + author too and sync exactly like library books do today.
+      // catalog can't (rebuilt / momentarily down).
       if (srcPath) doc.src = srcPath;
       if (author) doc.a = author;
       state.docs.push(doc);

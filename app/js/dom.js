@@ -11,7 +11,7 @@ export const isAndroid = /android/i.test(navigator.userAgent);
  *
  * It still lands in #status — the line the app shows when NO book is loaded —
  * but while a book IS loaded that line is hidden behind the active-book card
- * (biblioteca.js paintActiveBookCard), and then the text goes to the toast
+ * (catalog.js paintActiveBookCard), and then the text goes to the toast
  * instead. Exactly one surface is visible at any moment, so nothing is said
  * twice and nothing is said into the void.
  *
@@ -69,7 +69,7 @@ export const TOAST_UNDO_MS = 20000;
 
 // #toast lives UNDER the player card, so any open modal (z-index 1000) paints
 // straight over it: a surface that opens a modal cannot report through here at
-// all, and must use a dialog instead (see bulkQueueButton in biblioteca.js).
+// all, and must use a dialog instead (see bulkQueueButton in catalog.js).
 let toastTimer = null;
 
 /**

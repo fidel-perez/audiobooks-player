@@ -25,7 +25,7 @@
  * answer. The ⚙️ note says which is which, because a split nobody states is a
  * split discovered as a disagreement at 4 a.m.
  *
- * Every write is an ATOMIC per-key dict PATCH (json_store deep-merges just the
+ * Every write is an ATOMIC per-key dict PATCH (storage.js deep-merges just the
  * key(s) we send) — never a whole-blob PUT — so, exactly like the progress/queue
  * writes, a stale in-memory copy can never overwrite a key it didn't touch.
  *
@@ -89,7 +89,7 @@ export function resetHandSet() {
  * when the control is next used.
  *
  * `hidden` is the modal's own open/shut state (modal.js), so watching the
- * attribute needs no new event — the same shape biblioteca.js uses to resync the
+ * attribute needs no new event — the same shape catalog.js uses to resync the
  * offline buffer on modal close. An environment without MutationObserver applies
  * immediately rather than never: a value that lands early beats one that is
  * dropped.
@@ -139,7 +139,7 @@ export async function pullSettings(apply) {
 /**
  * Debounced ATOMIC push of one or more synced settings. Each call stages a key's
  * latest value; on the debounce edge every staged key goes out in ONE dict PATCH
- * that json_store deep-merges, touching only those keys. A stale/never-loaded
+ * that storage.js deep-merges, touching only those keys. A stale/never-loaded
  * copy can therefore only set the keys it actually changed, never clobber the
  * blob. Offline is a no-op — localStorage already holds the values and the next
  * change re-pushes.

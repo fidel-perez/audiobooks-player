@@ -1,11 +1,11 @@
 /**
  * Copy text to the clipboard from any context, including plain http.
  *
- * `navigator.clipboard` is undefined outside a secure context, so on the LAN
- * URLs (http://192.168.0.54/...) `navigator.clipboard.writeText(text)` threw a
+ * `navigator.clipboard` is undefined outside a secure context, so on a plain
+ * http:// LAN address `navigator.clipboard.writeText(text)` threw a
  * TypeError — thrown, not rejected — which made every `.catch()` hung off that
- * call dead code and left the copy buttons doing nothing at all. Over Tailscale
- * the same pages are https and take the first rung below.
+ * call dead code and left the copy buttons doing nothing at all. Over https
+ * the same pages take the first rung below.
  *
  *   1. Clipboard API — secure contexts (https, localhost).
  *   2. execCommand   — deprecated, but works over http while the document is

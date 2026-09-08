@@ -173,13 +173,13 @@ export function storeDoc(d) {
     // before this existed — they simply read 0, i.e. the old behaviour.
     chunkOffset: at.chunkOffset || 0,
     order: d.order || 0,
-    // Catalog path this doc was loaded from (biblioteca books only; null for
+    // Catalog path this doc was loaded from (catalog books only; null for
     // user-dropped local files). Lets the cross-device "en curso" list reopen
     // it from the raspi library on a device that never had it in IndexedDB.
     src: d.src || null,
     // Author, stashed from the catalog entry at load time, so the author page
     // still resolves after a reload even if the catalog is momentarily
-    // unreachable or its paths drifted (see docToBook in biblioteca.js).
+    // unreachable or its paths drifted (see docToBook in catalog.js).
     a: d.a || null,
     // Title, same deal — and it's what lets the active-book card paint the REAL
     // title on a cold boot, before (or without) the catalog. Absent it the card
@@ -194,7 +194,7 @@ export function storeDoc(d) {
     // grows the ring, tint, 📚 chip and saga line a few seconds later, when the
     // 14 MB catalog and the four json-store blobs finally answer. Absent on
     // records written before this existed; they heal on the first boot that
-    // reaches the catalog. See biblioteca.js#cardFacts.
+    // reaches the catalog. See catalog.js#cardFacts.
     card: d.card || null,
     // Day/night shelf this book belongs to (set at open time; null ⇒ night).
     // Persisted so a reload keeps it on the right en-curso shelf (see mode.js).

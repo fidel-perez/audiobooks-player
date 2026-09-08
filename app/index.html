@@ -55,9 +55,9 @@
            rewind happens automatically when sleep mode stops playback. -->
       <!-- The old ➕ add-files control (and its hidden file input) is gone: local
            uploads will be redone as a raspi-library upload, so books always carry
-           a catalog src. The top-bar 🎲 is gone too — the biblioteca modal's 🎲
+           a catalog src. The top-bar 🎲 is gone too — the catalog modal's 🎲
            spotlight is the one random-book control. -->
-      <!-- Biblioteca sits immediately before the ⚙️ gear (operator layout
+      <!-- Catálogo sits immediately before the ⚙️ gear (operator layout
            preference), and is here from the FIRST frame. It used to ship
            `hidden` and unhide once the Pi library endpoint answered — which put
            an IndexedDB read, the synchronous chunking of every stored book, a
@@ -66,16 +66,16 @@
            gained a button under the reader's eyes. Controls must not
            materialise late. Pressing it before the library has answered opens
            the modal on its loading state and fills in when the data lands (see
-           openBiblioteca): the wait moves to the person who asked for it. -->
-      <button id="bibliotecaBtn" class="icon-btn" type="button"
-        title="Biblioteca del servidor">📚</button>
+           openCatalog): the wait moves to the person who asked for it. -->
+      <button id="catalogBtn" class="icon-btn" type="button"
+        title="Catálogo">📚</button>
       <button id="settingsBtn" class="icon-btn" type="button" title="Ajustes">⚙️</button>
     </header>
 
-    <!-- Source card: status + resume note. Books come from the 📚 biblioteca (the
+    <!-- Source card: status + resume note. Books come from the 📚 catálogo (the
          local add-files picker was removed, to be redone as a library upload). -->
     <div class="card src">
-      <!-- Active-book card: a biblioteca-style card for the open book (title +
+      <!-- Active-book card: a catalog-style card for the open book (title +
            author). Replaces the raw #status/#resumeNote lines while a book is
            loaded — right-click valorates it (same popover as the library),
            tapping it lists the author's other books. Shown only when a doc is
@@ -129,8 +129,8 @@
 
     <!-- Sync banner: shown by js/progress.js whenever there is unsynced reading
          progress that can't reach the server (e.g. offline overnight), so you know
-         what to turn back on — Internet if the device is offline, Tailscale if it's
-         online but off the tailnet (syncBannerText). It retries automatically until a
+         what to turn back on — Internet if the device is offline, the sync server's
+         own reachability otherwise (syncBannerText). It retries automatically until a
          push confirms, then hides itself — this replaced the old 🌅 manual "push
          state" button. The text below is a placeholder: showSyncBanner always
          rewrites it before unhiding.
@@ -199,7 +199,7 @@
                cerrar. Plegado por defecto; el chip los cuenta. Cada libro se queda
                aquí hasta que lo quitas a mano (📤 «Quitar de recientes»): eso lo
                saca de esta vista SIN dejar de estar leído — pasa a vivir en el
-               filtro 📖 Leídos de la biblioteca. La sección entera se oculta cuando
+               filtro 📖 Leídos del catálogo. La sección entera se oculta cuando
                no hay ninguno pendiente. El encabezado ES el botón, para que el
                objetivo táctil ocupe toda la fila. -->
           <section id="encDoneSec" hidden>
@@ -581,7 +581,7 @@
     <!-- 18 Standard Ebooks / Project Gutenberg titles from data/catalog.json —
          no filter drawer, no gender/saga/wishlist chips: those narrowed an
          88 000-book personal library and have nothing to narrow here. See
-         js/biblioteca.js. -->
+         js/catalog.js. -->
     <div class="modal" id="bibModal" hidden>
       <div class="modal-back" data-close></div>
       <div class="modal-panel modal-full" role="dialog" aria-label="Catálogo">
@@ -606,7 +606,7 @@
     <!-- Opened by tapping (or right-clicking) any book card: ▶️ open, queue,
          mark finished, clear progress, remove from "en curso". Replaces the pi
          build's «Book and author» modal — there is no author index to browse
-         in an 18-title catalog. See js/biblioteca.js#openBookMenu. -->
+         in an 18-title catalog. See js/catalog.js#openBookMenu. -->
     <div class="modal" id="bookModal" hidden>
       <div class="modal-back" data-close></div>
       <div class="modal-panel" role="dialog" aria-label="Libro">

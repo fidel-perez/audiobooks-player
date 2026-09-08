@@ -33,9 +33,9 @@
  * own faces are ordinary http origins, so the installed app and a browser tab on
  * the same book are two readers that cannot hear each other's claim at all —
  * exactly the case this module exists to stop, in the one configuration where it
- * was silently absent. The only thing those two share is the json store they
+ * was silently absent. The only thing those two share is the sync store they
  * already sync progress through, so the claim goes there too: ▶ PUTs
- * `/api/audiobooks-reader`, and a window that is reading polls it and stands
+ * `/kv/audiobooks-reader`, and a window that is reading polls it and stands
  * down when it finds someone else's id.
  *
  * THREE THINGS KEEP THAT FROM PAUSING A BOOK NOBODY IS COMPETING FOR:
@@ -205,7 +205,7 @@ async function checkClaim() {
     return false; // unreachable store → the local half is all we have, as before
   }
   if (!held || typeof held !== "object") return false;
-  // An absent document reads as `{}` (json_store answers 200 for one that was
+  // An absent document reads as `{}` (storage.js answers 200 for one that was
   // never written), and an empty claim belongs to nobody — matching it against
   // an empty docKey would have a window stand down to a store with nothing in it.
   if (typeof held.id !== "string" || !held.id) return false;

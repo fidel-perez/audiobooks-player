@@ -17,7 +17,7 @@
  *        phone shows up on the tablet's shelf. A finished book leaves this list
  *        for the ✔ fold below — it is never dropped from the shelf.
  *      Long-pressing (right-click) a row opens a popover — the same rating
- *      controls as the biblioteca (⭐/👤/👍/👎) plus 🧹 "clear progress" (back to
+ *      controls as the catalog (⭐/👤/👍/👎) plus 🧹 "clear progress" (back to
  *      0%, into the random pool) and 🗑 remove. So when a book finishes you can
  *      rate it and then either leave it tracked as "read" or clear it.
  *      ORDER: last opened first, and NOTHING else (`sortByLastOpened`). Rating a
@@ -47,7 +47,7 @@
  * This modal is the successor to the removed library tab strip — the one place
  * to track / manage / resume the books in flight.
  *
- * Both lists are built from the SAME `buildBookCard` as the biblioteca modal, so
+ * Both lists are built from the SAME `buildBookCard` as the catalog modal, so
  * a book looks identical wherever it appears (status rings, title + year, saga
  * line, author caption, ✔ terminado cue, right-click menu). Each shelf only adds
  * what it needs: ▶ glyph + % badge + progress bar on "libros abiertos", and the
@@ -101,7 +101,7 @@ import {
   openBookMenu,
   isQueued,
   removeFromQueue,
-} from "./biblioteca.js";
+} from "./catalog.js";
 import { confirmDialog } from "./ui.js";
 import { spinnerLine } from "./busy.js";
 
@@ -112,7 +112,7 @@ function emptyRow(text) {
   });
 }
 
-// Is the ✔ Terminados fold open? Module state, like the biblioteca's filter
+// Is the ✔ Terminados fold open? Module state, like the catalog's filter
 // drawer (`drawerOpen`) — deliberately NOT persisted (collapsed is the resting
 // state), and deliberately not re-read off the DOM: it must survive a REPAINT,
 // because 🗑-ing a book from inside the fold re-renders the whole modal, and a
@@ -272,7 +272,7 @@ function docShelfState(d) {
 }
 
 /** One "libros abiertos" row for a LOCAL doc: seguir + long-press popover.
- *  The SAME card as the biblioteca (buildBookCard) — status rings, title + year,
+ *  The SAME card as the catalog (buildBookCard) — status rings, title + year,
  *  right-click menu — plus the ▶ active glyph, the % badge and the bar.
  *  `st` is its docShelfState (the caller already needs it, to pick the shelf). */
 function docRow(d, st) {
@@ -384,7 +384,7 @@ function remoteRow(entry) {
     finished: entry.done, // ✅ greys the row and keeps it here, like a local one
     pct: entry.pct,
     chip: pctChip(entry.pct),
-    title: `Abrir "${entry.title}" desde la biblioteca y opciones (▶️ Abrir; pulsa ▶ Play para leer)`,
+    title: `Abrir "${entry.title}" desde el catálogo y opciones (▶️ Abrir; pulsa ▶ Play para leer)`,
     onClick: () => openBookMenu(bk, menu),
     menu,
   });
@@ -505,7 +505,7 @@ function setQueueNote(text) {
 function queueRow(bk) {
   // Same book card everywhere: the queued book carries the same favorite-author
   // tint, rating rings, year, saga line and author caption as it does in the
-  // biblioteca — and here it carries nothing else at all.
+  // catalog — and here it carries nothing else at all.
   const menu = {
     kind: "queue",
     src: bk.p,
@@ -577,7 +577,7 @@ export function sortByLastOpened(rows) {
  * `done` (📖 library). So the fold is exactly the `recent` rows. Taking a book out
  * of the inbox (✅ off) clears `recent`; if it's still 📖 leído (`done`) but no
  * longer in progress it drops OFF the en-curso view entirely — it lives in the
- * biblioteca 📖 Leídos filter now, not on this shelf. Only a row that is still
+ * catalog 📖 Leídos filter now, not on this shelf. Only a row that is still
  * genuinely in progress (not `done`) falls back onto "abiertos".
  *
  * The ACTIVE book always stays on the LIVE shelf: the ▶ glyph and the green ring
@@ -750,7 +750,7 @@ export async function advanceFromProgress(finish) {
 function paintOpenBooks() {
   // No closeBookMenu() here: the «Book and author» menu is now the independent
   // `authorModal` layer, NOT a popover living inside a card this repaint replaces
-  // (see biblioteca.js dismissBookMenu). So repainting the shelf underneath must
+  // (see catalog.js dismissBookMenu). So repainting the shelf underneath must
   // LEAVE it open — otherwise every edit made from the menu while it sits over
   // «En curso» (rate / 📖 leído / bulk-queue, all of which repaint via
   // ctx.onAfter=renderEnCurso) would slam the menu shut. Action sites that truly
@@ -926,7 +926,7 @@ function paintQueue(books, synced) {
     // on screen. markStale() replaces the ring if the pull never lands.
     qEl.appendChild(
       synced
-        ? emptyRow("Cola vacía. Añade libros desde la biblioteca (🔜).")
+        ? emptyRow("Cola vacía. Añade libros desde el catálogo (🔜).")
         : spinnerLine("Cargando la cola…", "bib-empty"),
     );
   } else {
@@ -962,7 +962,7 @@ export function bindEnCurso() {
     renderEnCurso();
   };
   // The active-book card (and the no-book placeholder button) are the ONLY openers
-  // now (the 📖 top-bar button is gone). They live in biblioteca.js — which
+  // now (the 📖 top-bar button is gone). They live in catalog.js — which
   // encurso.js imports FROM, so a direct call would be a cycle. They fire this
   // event instead; same decoupling as `audiobooks:activated`.
   document.addEventListener("audiobooks:open-encurso", openEnCurso);

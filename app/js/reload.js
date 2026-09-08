@@ -21,9 +21,9 @@
  * own — no deadlock. An offline device keeps the "activa Internet" banner and its
  * 6 s retry loop, and simply never auto-reloads; the user can close the tab.
  *
- * THE SECOND GATE. A confirmed push proves the json store was reachable for one
+ * THE SECOND GATE. A confirmed push proves the sync store was reachable for one
  * PATCH. It does NOT prove the shell is fetchable: `online` fires the moment the
- * radio associates, before the route (or the tailnet tunnel) is up. Reconnecting
+ * radio associates, before the route is actually up. Reconnecting
  * at the end of a night's offline reading, the progress PATCH squeezed through,
  * the deferred reload fired, the navigation found no route — and the browser
  * painted its own "connect to the Internet" error page over a perfectly healthy

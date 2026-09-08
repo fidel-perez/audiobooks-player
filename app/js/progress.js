@@ -19,10 +19,10 @@ import { idbGetMeta, idbSetMeta } from "./db.js";
 import { mergeServerMap, sanitizeMap, isTombstone } from "./progress-merge.js";
 import { apiFetch } from "./storage.js";
 
-/* ===================== json-store mirror =====================
- * Besides the per-device localStorage position, mirror each doc's progress to
- * json-store (`/api/audiobooks-progress`, reached through Caddy exactly like the
- * biblioteca favorites) as one KV blob `{ "<docKey>": {title,pct,pos,total,ts} }`.
+/* ===================== sync-server mirror =====================
+ * Besides the per-device localStorage position, mirror each doc's progress
+ * through storage.js's `/kv/audiobooks-progress` seam as one KV blob
+ * `{ "<docKey>": {title,pct,pos,total,ts} }`.
  * The "en curso" modal reads this to list/manage in-progress books.
  *
  * OFFLINE MODE. The typical session is: read online, then flip the phone to
@@ -112,8 +112,8 @@ function persistIdbMap() {
 // re-pushes its unsanitized in-memory map) leaves `_op`/`entries` as top-level
 // server keys — non-books that `progress_merge` (additive) never removes. Sanitize
 // keeps them out of THIS client's logic, but they'd linger on the server forever;
-// so whenever we pull and see one, actively delete it with a null-PATCH (json_store
-// deep_merge drops exactly that key). Self-healing: any up-to-date client that
+// so whenever we pull and see one, actively delete it with a null-PATCH (the
+// deep-merge in storage.js drops exactly that key). Self-healing: any up-to-date client that
 // opens the store scrubs it, and no up-to-date client ever re-adds it.
 function cleanReservedKeys(serverBlob) {
   const junk = Object.keys(serverBlob).filter((k) => k === "_op" || k === "entries");
@@ -172,7 +172,7 @@ async function pullServerMap() {
     return false; // malformed body — safer not to push over it
   } catch (_) {
     /* store unreachable — localStorage still carries the position */
-    lastFailWasNetwork = true; // fetch rejected → off the tailnet (or no network)
+    lastFailWasNetwork = true; // fetch rejected → sync server unreachable (or no network)
     return false;
   }
 }
@@ -320,8 +320,7 @@ export function openedTsFor(docKey) {
  * first playback saveProgress fires. Creates a progress entry (carrying its
  * `src`) ONLY when none exists yet, so a further-along position already pushed by
  * another device is never regressed. Local uploads (no `src`) don't sync — the
- * rare exception; once uploads land in the raspi biblioteca they'll carry a
- * `src` and sync like everything else, so this behaviour stays consistent.
+ * rare exception.
  *
  * An ALREADY-tracked book is a RE-open: restamp `openedTs` (which is what moves
  * it to the top of the shelf) and touch nothing else. That is safe even before
@@ -417,7 +416,7 @@ export function getSyncedOpenBooks(localKeys) {
 /**
  * Progress entries that carry no catalog `src` — the books that CAN'T sync to
  * another device's "libros abiertos" shelf (a remote row needs a src to know
- * which library file to re-download). biblioteca.js matches each `title` (the
+ * which library file to re-download). catalog.js matches each `title` (the
  * stored filename) back to the catalog and heals the ones it can via
  * `backfillSrcs`. Returns `{docKey, title}` for every src-less entry (finished or
  * not — healing the identity is always safe and also fixes the terminados set).
@@ -483,7 +482,7 @@ export function backfillSrcs(pairs) {
  * for good. Drops the cross-device entry (synced shelf + server) AND this
  * device's local reading position, so reopening the book from the library starts
  * genuinely fresh instead of silently resuming where it was. The per-device
- * position purge matters for the NOT-loaded path (a ☁ remote row, or a biblioteca
+ * position purge matters for the NOT-loaded path (a ☁ remote row, or a catalog
  * card whose doc was evicted): removeDocSilent already clears the position for a
  * loaded doc, but a book trashed without being loaded used to keep its stale
  * `LS_POS_PREFIX` offset and resume on the next open.
@@ -631,7 +630,7 @@ export function resetDocProgress(doc) {
 
 /**
  * 🧹 "Limpiar progreso" on a book that is NOT loaded here (a ☁ cross-device row,
- * or a biblioteca card whose doc was evicted): rewind ONLY the position to 0% and
+ * or a catalog card whose doc was evicted): rewind ONLY the position to 0% and
  * KEEP everything else — the entry stays on the en-curso shelf, and its ✅ finished
  * mark + hours-played tally all survive (see `resetDocProgress`). 🧹 is rewind-only;
  * 🗑 (`dropProgress`) removes the book, ✅ unmarks finished. (Before, 🧹 on this
@@ -692,7 +691,7 @@ try {
 // Tapping the banner forces an immediate pull-then-push instead of waiting out
 // the SYNC_RETRY_MS tick — for "I'm back online but the banner is still up and I
 // want to poke it". `navigator.onLine` flipping true is not enough to prove the
-// tailnet is reachable, so we don't auto-fire on that; the tap is the user
+// sync server is reachable, so we don't auto-fire on that; the tap is the user
 // asserting the network is back. Same round-trip as the `online` handler; the
 // fetch outcome re-derives lastFailWasNetwork, so the banner text self-corrects.
 export function retrySyncNow() {
@@ -726,7 +725,7 @@ try {
 
 /** Immediate (non-debounced) push of the whole map as a ts-aware MERGE — never a
  *  destructive whole-blob PUT. The server folds each book in keeping the newer
- *  `ts` (json_store `progress_merge`), so a stale or half-loaded in-memory map can
+ *  `ts` (storage.js's `progress_merge` op), so a stale or half-loaded in-memory map can
  *  only ADD or advance books; it can NEVER shrink the store. This is the fix for
  *  "a page refresh overwrote my open books with a smaller set" — a live device
  *  that re-pushed its partial map used to wipe every book it hadn't loaded.
@@ -754,7 +753,7 @@ function flushProgressStore() {
     })
     .catch(() => {
       /* offline — localStorage holds it; nag + retry until data returns */
-      lastFailWasNetwork = true; // fetch rejected → off the tailnet (or no network)
+      lastFailWasNetwork = true; // fetch rejected → sync server unreachable (or no network)
       scheduleSyncRetry();
     });
 }
@@ -844,7 +843,7 @@ function syncBannerText() {
     );
   }
   return (
-    "🔄 Guardando progreso… no se alcanza el servidor; conecta Tailscale o vuelve a abrir la app desde el hub." +
+    "🔄 Guardando progreso… no se alcanza el servidor de sincronización." +
     TAP_HINT
   );
 }
@@ -869,10 +868,10 @@ let syncRetryInFlight = false;
 
 /**
  * We still hold progress the server hasn't accepted. Show the persistent banner
- * (Internet vs. Tailscale, see syncBannerText) and keep retrying (pull-then-push)
+ * (Internet vs. sync server, see syncBannerText) and keep retrying (pull-then-push)
  * on a timer until a PUT confirms — the automatic stand-in for the removed 🌅 push
  * button. Each tick re-renders the text, so it follows the device flipping between
- * offline and online-but-off-tailnet without waiting for a sync. No-op once
+ * offline and online-but-unsynced without waiting for a sync. No-op once
  * everything is synced.
  */
 function scheduleSyncRetry() {
@@ -1080,7 +1079,7 @@ export function saveProgress() {
  * A book carries TWO separate, independently-togglable flags — they must never be
  * conflated (a mistake on one is un-doable without touching the other):
  *
- *  - `done`  = 📖 "Leído" — the durable library record. Powers the biblioteca 📖
+ *  - `done`  = 📖 "Leído" — the durable library record. Powers the catalog 📖
  *              Leídos filter (isSrcFinished / entryFinished, which also counts a
  *              genuine 100%) and keeps the book out of the 🎲 random pool. Forever,
  *              until un-marked. Toggle: markDocFinished / unmarkDocFinished.
@@ -1138,7 +1137,7 @@ export function isDocFinished(docKey) {
 }
 
 /** True if `docKey` reads as finished for the 📖 CUE — the explicit `done` flag OR
- *  a genuine 100% (same truth as `entryFinished`, the biblioteca 📖 Leídos filter
+ *  a genuine 100% (same truth as `entryFinished`, the catalog 📖 Leídos filter
  *  and the card's ✔ ring). Keeps the 📖 button's green in step with the shelf, so a
  *  book read to the end never shows a grey 📖. The click still toggles `done`. */
 export function isDocReadish(docKey) {
@@ -1255,7 +1254,7 @@ export function listenedEnough(docKey, bodySpan) {
 /**
  * A progress entry counts as "finished" when it was explicitly marked done OR it
  * reached 100% of the body span (read to the end without the manual mark). The
- * biblioteca ✔ filter and the random-pick exclusion both use this, so a book you
+ * catalog ✔ filter and the random-pick exclusion both use this, so a book you
  * simply read to the end is treated the same as one you ticked "terminado".
  */
 export function entryFinished(v) {
@@ -1284,7 +1283,7 @@ function migrateRecentEntries(map) {
 }
 
 /**
- * Catalog `src` paths that have been finished — powers the biblioteca
+ * Catalog `src` paths that have been finished — powers the catalog
  * "terminados" ✔ filter and keeps finished books out of the random picks.
  */
 export function finishedSrcSet() {
@@ -1352,7 +1351,7 @@ export function mostRecentSyncedBook() {
  * The docKey of the progress entry that points at this catalog `src` path, or
  * null. Most-recent (largest `ts`) wins when several devices' entries share a
  * path. Lets the unified book menu clear/remove the progress of a book shown in
- * the biblioteca list that is in progress on ANOTHER device (so not loaded here,
+ * the catalog list that is in progress on ANOTHER device (so not loaded here,
  * hence no local doc to act on).
  */
 export function progressKeyForSrc(src) {
