@@ -59,16 +59,21 @@ export const PRECACHE_TICK_MS = 4000;
 export const CACHE_MAX_BYTES = 48 * 1024 * 1024;
 export const CACHE_MAX_ENTRIES = 240;
 
-// Plain-text / Markdown docs have no real pages, so we synthesise "pages" of
-// this many characters (~a paperback page) to keep the page readout and the
-// "go to page" control meaningful. See js/text.js.
+// Plain-text / Markdown docs have no pages, so js/text.js cuts "pages" of this
+// many characters, about a paperback page.
 export const CHARS_PER_PAGE = 1800;
 
 // Sleep mode ("modo dormir"): the "still awake?" check that stops the book when
 // you have stopped moving the phone. It no longer touches the screen at all —
 // no fullscreen, no blackout, no wake lock (see js/sleep.js for why that whole
 // apparatus existed and why it could go).
-export const SLEEP_GRACE_MS = 30000; // time to move after the warning beep
+//
+// Before a stop: SLEEP_WARN_BEEPS soft beeps, SLEEP_WARN_EVERY_MS apart; a move
+// during them keeps reading. Raise SLEEP_WARN_GAIN if an awake listener misses them.
+export const SLEEP_WARN_BEEPS = 5;
+export const SLEEP_WARN_EVERY_MS = 5000;
+export const SLEEP_WARN_GAIN = 0.08;
+export const SLEEP_GRACE_MS = SLEEP_WARN_BEEPS * SLEEP_WARN_EVERY_MS; // stop 5 s after the last beep
 export const SLEEP_MOTION_THRESHOLD = 1.2; // m/s² of movement counted as "awake"
 // Diagnostic: blip on every move the watchdog counts, so "does shaking the phone
 // register with the screen off?" can be answered in five seconds instead of by

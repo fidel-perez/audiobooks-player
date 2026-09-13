@@ -2,14 +2,8 @@
  * Sleep mode ("modo dormir") — fall asleep to the reader without it playing
  * all night.
  *
- * WHAT IT DOES NOW: while a book is playing it watches for the phone being
- * moved. If nothing moves it for the chosen interval it beeps once and, unless
- * you move it within a short grace window, stops playback — rewinding
- * `#rewindMin` minutes and saving that position, so the morning ▶ resumes just
- * before you stopped taking it in. That is the whole feature. It is a SETTING
- * (⚙️ → 😴, on by default, remembered on this device), not a per-night button:
- * it costs nothing while you are awake, because it only ever acts on a phone
- * that is playing AND has been still.
+ * WHAT IT DOES: a playing phone left still for the interval plays five soft
+ * beeps, then stops and rewinds `#rewindMin` unless moved.
  *
  * WHAT IT NO LONGER DOES: touch the screen. There used to be a fullscreen
  * pure-black overlay with a faint 😴 on it and a two-drag unlock, and none of
@@ -30,13 +24,10 @@
  *     natively under the playback wake lock and calls into the page — see
  *     `window.__PI_MOTION__` (pi-shell `bootstrap.js` / `MotionWatch.kt`). This
  *     works with the screen off, which is the point.
- *   - IN A BROWSER TAB: `devicemotion` while the page is visible, which is all a
- *     browser can offer. With the screen off there is no way to answer the "are
- *     you still awake?" question, so we do not ask it: the timeout stops the book
- *     straight away rather than beeping at someone who cannot reply. Waking the
- *     screen counts as movement (see `noteInteraction`).
+ *   - IN A BROWSER TAB: `devicemotion` while the page is visible. With the screen
+ *     off, waking the screen during the beeps is the move (`noteInteraction`).
  *
- * The 30-min-of-stillness rule therefore reads, in a browser, as "stops 30 min
+ * The 30-min-of-stillness rule therefore reads, in a browser, as "beeps 30 min
  * after you last touched the phone" — a plain sleep timer, honestly labelled.
  *
  * AND THE WATCHDOG ITSELF CANNOT BE TRUSTED TO RUN. `tick` is a `setInterval`
@@ -60,6 +51,9 @@ import {
   SLEEP_MOTION_THRESHOLD,
   SLEEP_MIN_DEFAULT,
   SLEEP_TEST_BEEP_MS,
+  SLEEP_WARN_BEEPS,
+  SLEEP_WARN_EVERY_MS,
+  SLEEP_WARN_GAIN,
 } from "./config.js";
 import { $, setStatus } from "./dom.js";
 import { saveProgress } from "./progress.js";
@@ -69,10 +63,10 @@ import { state } from "./state.js";
 
 const sleep = {
   on: false, // the setting: is the watchdog armed at all
-  motion: false, // whether `devicemotion` is actually usable here
   checkMs: SLEEP_MIN_DEFAULT * 60000, // stillness allowed before the check
   lastMotionAt: 0,
-  graceUntil: 0, // >0 while waiting for a move after the warning beep
+  graceUntil: 0, // >0 while the warning beeps play
+  beeps: [], // gain nodes of the warning beeps, cut when a move answers them
   tick: null,
   // When `tick` last actually ran, or null while nothing is armed. This is the
   // only evidence the page has that it was STOPPED rather than merely idle — see
@@ -142,19 +136,6 @@ function nativeMotion() {
 }
 
 /**
- * Can a sleeping listener actually ANSWER the "still awake?" beep by moving the
- * phone? Only if something is delivering motion right now: the native bridge
- * (screen off included), or `devicemotion` with the screen on. When the answer is
- * no, the beep would be a question shouted at someone who has no way to reply —
- * `tick` stops the book instead of asking.
- */
-function canAnswer() {
-  if (nativeMotion()) return true;
-  if (!sleep.motion) return false;
-  return typeof document === "undefined" || document.visibilityState !== "hidden";
-}
-
-/**
  * A move worth counting, from whichever source saw it.
  *
  * `fromSensor` separates a real accelerometer reading from the screen coming
@@ -167,7 +148,7 @@ function registerMotion(fromSensor) {
   sleep.lastMotionAt = Date.now();
   if (fromSensor) testBlip();
   if (sleep.graceUntil) {
-    sleep.graceUntil = 0; // moved in time → stay awake
+    endGrace(); // moved in time → stay awake
     setStatus("😴 Movimiento detectado, sigo leyendo…");
   }
 }
@@ -213,28 +194,50 @@ function ensureAudio() {
   } catch (_) {}
 }
 
-/** Two short sine blips — audible over the narration, not jarring. */
+/**
+ * The warning beeps, all scheduled now on the audio clock, so a throttled timer
+ * cannot bunch or drop one.
+ */
+//
+// A low sine at low gain, faded in and out, reaches a listener still awake and
+// passes under one already asleep; a hard 880 Hz edge is what wakes people.
 function beep() {
+  silenceBeeps();
   ensureAudio();
   const ctx = sleep.audioCtx;
   if (!ctx) return;
   try {
     const t0 = ctx.currentTime;
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < SLEEP_WARN_BEEPS; i++) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      const start = t0 + i * 0.35;
+      const start = t0 + (i * SLEEP_WARN_EVERY_MS) / 1000;
       osc.type = "sine";
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
-      gain.gain.linearRampToValueAtTime(0, start + 0.28);
+      osc.frequency.value = 523;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(SLEEP_WARN_GAIN, start + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.6);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(start);
-      osc.stop(start + 0.3);
+      osc.stop(start + 0.65);
+      sleep.beeps.push(gain);
     }
   } catch (_) {}
+}
+
+function silenceBeeps() {
+  for (const g of sleep.beeps) {
+    try {
+      g.disconnect();
+    } catch (_) {}
+  }
+  sleep.beeps = [];
+}
+
+function endGrace() {
+  sleep.graceUntil = 0;
+  silenceBeeps();
 }
 
 /**
@@ -249,10 +252,8 @@ function beep() {
  * whether the grace beep can be answered: one 20-40 min round trip per attempt.
  * With it, the answer is a shake away, screen off, no waiting.
  *
- * Deliberately UNLIKE `beep()`: a single blip, higher and shorter, so a test
- * chirp is never mistaken for the two-note "¿sigues despierto?" question.
- * Throttled by SLEEP_TEST_BEEP_MS — `devicemotion` fires ~62x/s, and one blip
- * per event is a smoke alarm, not a diagnostic.
+ * Higher and shorter than the `beep()` warning, so a test chirp never reads as
+ * it. SLEEP_TEST_BEEP_MS throttles the ~62 events/s to one blip per shake.
  */
 function testBlip() {
   if (!sleep.testBeep) return;
@@ -311,7 +312,7 @@ function tick() {
   // Only count idle time while actually reading; pausing shouldn't nag.
   if (!(state.speaking && !state.paused)) {
     sleep.lastMotionAt = now;
-    sleep.graceUntil = 0;
+    endGrace();
     return;
   }
   if (sleep.graceUntil) {
@@ -320,15 +321,11 @@ function tick() {
   }
   if (now - sleep.lastMotionAt < sleep.checkMs) return;
 
-  if (canAnswer()) {
-    beep();
-    sleep.graceUntil = now + SLEEP_GRACE_MS;
-    setStatus("😴 ¿Sigues despierto? Mueve el móvil para continuar…");
-  } else {
-    // Nothing can hear a move right now (browser tab, screen off), so asking
-    // would be a beep with no possible answer. Stop.
-    fallAsleep();
-  }
+  // Beeps everywhere: a browser tab with the screen off can still answer them,
+  // because waking the screen counts as a move.
+  beep();
+  sleep.graceUntil = now + SLEEP_GRACE_MS;
+  setStatus("😴 ¿Sigues despierto? Mueve el móvil para continuar…");
 }
 
 /**
@@ -353,7 +350,7 @@ function fallAsleep(at = Date.now()) {
   sleepRewind(at);
   saveProgress();
 
-  sleep.graceUntil = 0;
+  endGrace();
   sleep.lastMotionAt = Date.now();
   setStatus("😴 Sin movimiento: lectura detenida. Buenas noches.");
 }
@@ -436,8 +433,7 @@ export async function setSleepEnabled(on) {
     clearInterval(sleep.tick);
     sleep.tick = null;
     sleep.lastTickAt = null; // nothing is running, so no gap means anything
-    sleep.graceUntil = 0;
-    sleep.motion = false;
+    endGrace();
     sleep.prevAccel = null;
     window.removeEventListener?.("devicemotion", onMotion);
     if (nativeMotion()) window.__PI_MOTION__.watch(false);
@@ -445,7 +441,7 @@ export async function setSleepEnabled(on) {
   }
 
   sleep.lastMotionAt = Date.now();
-  sleep.graceUntil = 0;
+  endGrace();
   sleep.prevAccel = null;
   // As if the tick had just run: arming is the page demonstrably running, and a
   // fresh watchdog must not read as one that has been frozen since the epoch.
@@ -454,7 +450,7 @@ export async function setSleepEnabled(on) {
   if (nativeMotion()) window.__PI_MOTION__.watch(true);
   // `devicemotion` is kept on even in the shell: it is the finer-grained of the
   // two while the screen is on, and the native side is deliberately coarse.
-  sleep.motion = await enableMotion();
+  await enableMotion();
 }
 
 /** The `pi-motion` listener is wired once per page, not once per arming. */
@@ -501,7 +497,7 @@ export function applySleepMinutes() {
   sleep.checkMs = (Number.isFinite(mins) ? mins : SLEEP_MIN_DEFAULT) * 60000;
   if (sleep.on) {
     sleep.lastMotionAt = Date.now();
-    sleep.graceUntil = 0;
+    endGrace();
   }
 }
 
@@ -542,15 +538,17 @@ export function sleepModeNote(mins, rewind) {
   }
   if (nativeMotion()) {
     return (
-      `Con la lectura en marcha: si no mueves el móvil en ${mins} min, suena un ` +
-      `pitido y, si sigues sin moverlo, ${stop}. Funciona con la pantalla apagada.` +
+      `Con la lectura en marcha: si no mueves el móvil en ${mins} min, suenan ` +
+      `${SLEEP_WARN_BEEPS} pitidos suaves y, si sigues sin moverlo, ${stop}. ` +
+      `Funciona con la pantalla apagada.` +
       scope
     );
   }
   return (
-    `Con la lectura en marcha: ${stop} tras ${mins} min sin tocar el móvil. Con la ` +
-    `pantalla encendida basta con moverlo para seguir; apagada, el navegador no ve ` +
-    `el sensor y el temporizador corre igual (en la app del móvil sí funciona con ` +
-    `la pantalla apagada).` + scope
+    `Con la lectura en marcha: tras ${mins} min sin tocar el móvil suenan ` +
+    `${SLEEP_WARN_BEEPS} pitidos suaves y, si nadie responde, ${stop}. Con la ` +
+    `pantalla encendida basta con moverlo para seguir; apagada, enciéndela durante ` +
+    `los pitidos (en la app del móvil basta con moverlo también con la pantalla ` +
+    `apagada).` + scope
   );
 }
