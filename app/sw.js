@@ -10,7 +10,7 @@ import { getSyncServerUrlIdb } from "./js/storage.js";
 
 // CACHE_NAME below is bumped on every shipped change so a client refreshes
 // the shell; see git log for what changed and when.
-const CACHE_NAME = "audiobooks-network-first-v236";
+const CACHE_NAME = "audiobooks-network-first-v237";
 
 // The Piper runtime — onnxruntime-web and the espeak-ng phonemiser — is tens of
 // MB and lives on CDNs the vendored library hardcodes. It is cached SEPARATELY,

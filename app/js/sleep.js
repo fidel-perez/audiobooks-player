@@ -46,6 +46,7 @@
 
 import {
   REWIND_MIN_DEFAULT,
+  SLEEP_EXTEND_MIN_DEFAULT,
   SLEEP_FROZEN_MS,
   SLEEP_GRACE_MS,
   SLEEP_MOTION_THRESHOLD,
@@ -58,7 +59,12 @@ import {
 import { $, setStatus } from "./dom.js";
 import { saveProgress } from "./progress.js";
 import { sleepRewind, stopAll } from "./player.js";
-import { isShortRun, onSleepPresetChange, sleepMinutesOverride } from "./sleepPreset.js";
+import {
+  isShortRun,
+  onSleepPresetChange,
+  sleepMinutesOverride,
+  stampAfterMove,
+} from "./sleepPreset.js";
 import { state } from "./state.js";
 
 const sleep = {
@@ -145,7 +151,9 @@ function nativeMotion() {
  * works" to someone who has learnt nothing.
  */
 function registerMotion(fromSensor) {
-  sleep.lastMotionAt = Date.now();
+  const ext = Number.parseInt($("sleepExtendMin")?.value, 10);
+  const extendMs = (Number.isFinite(ext) ? ext : SLEEP_EXTEND_MIN_DEFAULT) * 60000;
+  sleep.lastMotionAt = stampAfterMove(Date.now(), sleep.lastMotionAt, sleep.checkMs, extendMs);
   if (fromSensor) testBlip();
   if (sleep.graceUntil) {
     endGrace(); // moved in time → stay awake

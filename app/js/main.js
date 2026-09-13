@@ -58,6 +58,7 @@ import {
   VOL_MAX,
   LS_ACTIVE_KEY,
   LS_SLEEP_BEEP,
+  LS_SLEEP_EXTEND_MIN,
   LS_SLEEP_MIN,
   LS_SLEEP_ON,
   SLEEP_BEEP_DEFAULT,
@@ -733,6 +734,14 @@ function applySyncedSettings(s) {
   // while the Pi's browser face had been set to 45. `applySleepMinutes` because
   // an adopted value must reach the live watchdog, not only the control: this
   // pull lands seconds into a boot, potentially with a book already playing.
+  const ext = Number(s.sleepExtendMin);
+  if (Number.isFinite(ext) && !isHandSet("sleepExtendMin") && isOption("sleepExtendMin", ext)) {
+    setSelectValue("sleepExtendMin", ext);
+    try {
+      localStorage.setItem(LS_SLEEP_EXTEND_MIN, String(ext));
+    } catch (_) {}
+  }
+
   let liveInterval = false;
   const sm2 = Number(s.sleepMin);
   if (Number.isFinite(sm2) && !isHandSet("sleepMin") && isOption("sleepMin", sm2)) {
@@ -958,7 +967,16 @@ try {
   if (savedMin != null && isOption("sleepMin", savedMin)) longSleep.min = savedMin;
   const savedRw = localStorage.getItem(LS_REWIND_MIN);
   if (savedRw != null && isOption("rewindMin", savedRw)) longSleep.rewind = savedRw;
+  setSelectValue("sleepExtendMin", localStorage.getItem(LS_SLEEP_EXTEND_MIN));
 } catch (_) {}
+$("sleepExtendMin").addEventListener("change", () => {
+  const v = $("sleepExtendMin").value;
+  markHandSet("sleepExtendMin");
+  try {
+    localStorage.setItem(LS_SLEEP_EXTEND_MIN, v);
+  } catch (_) {}
+  pushSetting("sleepExtendMin", v);
+});
 // Live-update the stop interval if the setting changes mid-session, remember the
 // choice for next time — and SYNC it, like #rewindMin.
 //

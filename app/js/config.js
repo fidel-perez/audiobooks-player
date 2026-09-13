@@ -201,6 +201,10 @@ export const LS_ACTIVE_KEY = "audiobooks_active_key";
 // Sleep-mode minutes: last-used value, restored on load (default 40).
 export const LS_SLEEP_MIN = "audiobooks_sleep_min";
 export const SLEEP_MIN_DEFAULT = 40;
+// A move with fewer minutes left than this raises the remainder to it; more left
+// restarts the interval. Synced as `sleepExtendMin`.
+export const LS_SLEEP_EXTEND_MIN = "audiobooks_sleep_extend_min";
+export const SLEEP_EXTEND_MIN_DEFAULT = 15;
 // Is sleep mode armed at all? It used to be a top-bar button you pressed for one
 // night; it is now a setting that stays where you left it, ON by default —
 // falling asleep to a book is the normal case, and the mode costs nothing when

@@ -64,6 +64,15 @@ import {
   SLEEP_SHORT_REWIND,
 } from "./config.js";
 
+/**
+ * `lastMotionAt` after a move at `now`: under `extendMs` left rises to `extendMs`
+ * and never past it; more left restarts `checkMs`.
+ */
+export function stampAfterMove(now, lastMotionAt, checkMs, extendMs) {
+  const left = lastMotionAt + checkMs - now;
+  return left < extendMs ? now + extendMs - checkMs : now;
+}
+
 /** Armed for the next stop? The long preset is the absence of this. */
 let short = false;
 

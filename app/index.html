@@ -470,6 +470,19 @@
                 <option value="55">55 min</option>
                 <option value="60">60 min</option>
               </select>
+              <label for="sleepExtendMin">Minutos extra al mover el móvil</label>
+              <select id="sleepExtendMin" aria-label="Minutos extra al mover el móvil">
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15" selected>15 min</option>
+                <option value="20">20 min</option>
+                <option value="25">25 min</option>
+                <option value="30">30 min</option>
+              </select>
+              <div class="hint prose">Si mueves el móvil cuando quedan menos minutos que
+                estos, lo que queda sube a estos minutos, y moverlo otra vez no suma
+                más. Si quedan más, la cuenta vuelve a empezar entera. Se recuerda
+                entre dispositivos.</div>
               <!-- Lo escribe js/sleep.js#sleepModeNote al abrir los ajustes: el
                    comportamiento con la pantalla apagada NO es el mismo en la app
                    del móvil (sensor nativo) que en una pestaña del navegador
